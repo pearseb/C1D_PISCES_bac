@@ -168,6 +168,8 @@ CONTAINS
         IF( cltra == 'PCHL'     )   jppch = jn      !: Diatoms Chlorophyll Concentration
         IF( cltra == 'PFe'      )   jppfe = jn      !: Picophytoplankton Fe biomass
         IF( cltra == 'LGW'      )   jplgw = jn      !: Weak ligands
+        IF( cltra == 'AOA'      )   jpaoa = jn      !: Ammonia oxidising archaea C concentration
+        IF( cltra == 'NOB'      )   jpnob = jn      !: Nitrite oxidising bacteria C concentration
       END DO
 
       CALL p4z_sms_init       !  Maint routine
@@ -214,6 +216,8 @@ CONTAINS
          trn(:,:,:,jpno3) = no3
          trn(:,:,:,jpno2) = bioma0
          trn(:,:,:,jpnh4) = bioma0
+         trn(:,:,:,jpaoa) = bioma0
+         trn(:,:,:,jpnob) = bioma0
          IF( ln_ligand) THEN
             trn(:,:,:,jplgw) = 0.6E-9
          ENDIF

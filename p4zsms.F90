@@ -441,7 +441,8 @@ CONTAINS
             zwork(:,:,:) =    trn(:,:,:,jpno3) + trn(:,:,:,jpnh4) + trn(:,:,:,jpno2)   &
                &          +   trn(:,:,:,jpphy) + trn(:,:,:,jpdia)                      &
                &          +   trn(:,:,:,jppoc) + trn(:,:,:,jpgoc) + trn(:,:,:,jpdoc)   &        
-               &          +   trn(:,:,:,jpzoo) + trn(:,:,:,jpmes) 
+               &          +   trn(:,:,:,jpzoo) + trn(:,:,:,jpmes)                      & 
+               &          +   trn(:,:,:,jpaoa) + trn(:,:,:,jpnob)
         ELSE
             zwork(:,:,:) =    trn(:,:,:,jpno3) + trn(:,:,:,jpnh4) + trn(:,:,:,jpno2)   &
                &          +   trn(:,:,:,jpnph) + trn(:,:,:,jpndi) + trn(:,:,:,jpnpi)   & 
@@ -459,7 +460,8 @@ CONTAINS
             zwork(:,:,:) =    trn(:,:,:,jppo4)                                         &
                &          +   trn(:,:,:,jpphy) + trn(:,:,:,jpdia)                      &
                &          +   trn(:,:,:,jppoc) + trn(:,:,:,jpgoc)  + trn(:,:,:,jpdoc)  &        
-               &          +   trn(:,:,:,jpzoo) + trn(:,:,:,jpmes) 
+               &          +   trn(:,:,:,jpzoo) + trn(:,:,:,jpmes)                      &
+               &          +   trn(:,:,:,jpaoa) + trn(:,:,:,jpnob) 
         ELSE
             zwork(:,:,:) =    trn(:,:,:,jppo4) + trn(:,:,:,jppph)                      &
                &          +   trn(:,:,:,jppdi) + trn(:,:,:,jpppi)                      & 
