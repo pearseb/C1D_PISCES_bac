@@ -66,11 +66,11 @@ CONTAINS
       INTEGER  ::   ji, jj, jk
       REAL(wp) ::   zsilfac, znanotot, zdiattot, zconctemp, zconctemp2
       REAL(wp) ::   zratio, zmax, zsilim, ztn, zadap, zlim, zsilfac2, zsiborn
-      REAL(wp) ::   zprod, zproreg, zproreg2, zprochln, zprochld
+      REAL(wp) ::   zprod, zprochln, zprochld
       REAL(wp) ::   zmaxday, zdocprod, zpislopen, zpisloped
       REAL(wp) ::   zmxltst, zmxlday
       REAL(wp) ::   zrum, zcodel, zargu, zval, zfeup, chlcnm_n, chlcdm_n
-      REAL(wp) ::   zfact
+      REAL(wp) ::   zfact, zton, znitrate2ton
       CHARACTER (len=25) :: charout
       REAL(wp), ALLOCATABLE, DIMENSION(:,:) :: zw2d
       REAL(wp), ALLOCATABLE, DIMENSION(:,:,:) :: zw3d
@@ -79,7 +79,9 @@ CONTAINS
       REAL(wp), DIMENSION(jpi,jpj,jpk) :: zpislopeadn, zpislopeadd, zysopt  
       REAL(wp), DIMENSION(jpi,jpj,jpk) :: zprdia, zprbio, zprdch, zprnch   
       REAL(wp), DIMENSION(jpi,jpj,jpk) :: zprorcan, zprorcad, zprofed, zprofen
-      REAL(wp), DIMENSION(jpi,jpj,jpk) :: zpronewn, zpronewd
+      REAL(wp), DIMENSION(jpi,jpj,jpk) :: zprono3n, zprono3d
+      REAL(wp), DIMENSION(jpi,jpj,jpk) :: zprono2n, zprono2d
+      REAL(wp), DIMENSION(jpi,jpj,jpk) :: zproregn, zproregd
       REAL(wp), DIMENSION(jpi,jpj,jpk) :: zmxl_fac, zmxl_chl
       REAL(wp), DIMENSION(jpi,jpj,jpk) :: zpligprod1, zpligprod2
       !!---------------------------------------------------------------------
@@ -90,7 +92,9 @@ CONTAINS
       !
       zprorcan(:,:,:) = 0._wp ; zprorcad(:,:,:) = 0._wp ; zprofed (:,:,:) = 0._wp
       zprofen (:,:,:) = 0._wp ; zysopt  (:,:,:) = 0._wp
-      zpronewn(:,:,:) = 0._wp ; zpronewd(:,:,:) = 0._wp ; zprdia  (:,:,:) = 0._wp
+      zprono3n(:,:,:) = 0._wp ; zprono3d(:,:,:) = 0._wp ; zprdia  (:,:,:) = 0._wp
+      zprono2n(:,:,:) = 0._wp ; zprono2d(:,:,:) = 0._wp
+      zproregn(:,:,:) = 0._wp ; zproregd(:,:,:) = 0._wp
       zprbio  (:,:,:) = 0._wp ; zprdch  (:,:,:) = 0._wp ; zprnch  (:,:,:) = 0._wp 
       zmxl_fac(:,:,:) = 0._wp ; zmxl_chl(:,:,:) = 0._wp 
 
@@ -226,8 +230,6 @@ CONTAINS
             DO ji = 1, jpi
                zprbio(ji,jj,jk) = zprbio(ji,jj,jk) * ( 1. - fr_i(ji,jj) )
                zprdia(ji,jj,jk) = zprdia(ji,jj,jk) * ( 1. - fr_i(ji,jj) )
-               zprbio(ji,jj,jk) = zprbio(ji,jj,jk) * ( 1. - fr_i(ji,jj) )
-               zprdia(ji,jj,jk) = zprdia(ji,jj,jk) * ( 1. - fr_i(ji,jj) )
             END DO
          END DO
       END DO
@@ -237,20 +239,33 @@ CONTAINS
          DO jj = 1, jpj
             DO ji = 1, jpi
                IF( etot_ndcy(ji,jj,jk) > 1.E-3 ) THEN
+
+                  zton = trb(ji,jj,jk,jpno3) + trb(ji,jj,jk,jpno2) ! total oxidised nitrogen (TON)
+                  znitrate2ton = ( trb(ji,jj,jk,jpno3) + rtrn ) / ( zton + rtrn ) ! proportion of NO3 to TON available
+
                   !  production terms for nanophyto. (C)
                   zprorcan(ji,jj,jk) = zprbio(ji,jj,jk)  * xlimphy(ji,jj,jk) * trb(ji,jj,jk,jpphy) * rfact2
-                  zpronewn(ji,jj,jk)  = zprorcan(ji,jj,jk)* xnanono3(ji,jj,jk) / ( xnanono3(ji,jj,jk) + xnanonh4(ji,jj,jk) + rtrn )
-                  !
+                  zprono3n(ji,jj,jk) = zprorcan(ji,jj,jk) * ( (xnanono3(ji,jj,jk) + rtrn) / ( xnanono3(ji,jj,jk)  &
+                  &                    + xnanonh4(ji,jj,jk) + rtrn) ) * znitrate2ton
+                  zprono2n(ji,jj,jk) = zprorcan(ji,jj,jk) * ( (xnanono3(ji,jj,jk) + rtrn) / ( xnanono3(ji,jj,jk)  &
+                  &                    + xnanonh4(ji,jj,jk) + rtrn) ) * (1.0 - znitrate2ton)
+
+                  ! iron stuff nanos
                   zratio = trb(ji,jj,jk,jpnfe) / ( trb(ji,jj,jk,jpphy) * fecnm + rtrn )
                   zmax   = MAX( 0., ( 1. - zratio ) / ABS( 1.05 - zratio ) ) 
                   zprofen(ji,jj,jk) = fecnm * zprmaxn(ji,jj,jk) * ( 1.0 - fr_i(ji,jj) )  &
                   &             * ( 4. - 4.5 * xlimnfe(ji,jj,jk) / ( xlimnfe(ji,jj,jk) + 0.5 ) )    &
                   &             * biron(ji,jj,jk) / ( biron(ji,jj,jk) + concnfe(ji,jj,jk) )  &
                   &             * zmax * trb(ji,jj,jk,jpphy) * rfact2
+
                   !  production terms for diatoms (C)
                   zprorcad(ji,jj,jk) = zprdia(ji,jj,jk) * xlimdia(ji,jj,jk) * trb(ji,jj,jk,jpdia) * rfact2
-                  zpronewd(ji,jj,jk) = zprorcad(ji,jj,jk) * xdiatno3(ji,jj,jk) / ( xdiatno3(ji,jj,jk) + xdiatnh4(ji,jj,jk) + rtrn )
-                  !
+                  zprono3d(ji,jj,jk) = zprorcad(ji,jj,jk) * ( (xdiatno3(ji,jj,jk) + rtrn ) / ( xdiatno3(ji,jj,jk) &
+                  &                    + xdiatnh4(ji,jj,jk) + rtrn) ) * znitrate2ton
+                  zprono2d(ji,jj,jk) = zprorcad(ji,jj,jk) * ( (xdiatno3(ji,jj,jk) + rtrn ) / ( xdiatno3(ji,jj,jk) &
+                  &                    + xdiatnh4(ji,jj,jk) + rtrn) ) * (1.0 - znitrate2ton)
+
+                  ! iron stuff diatoms
                   zratio = trb(ji,jj,jk,jpdfe) / ( trb(ji,jj,jk,jpdia) * fecdm + rtrn )
                   zmax   = MAX( 0., ( 1. - zratio ) / ABS( 1.05 - zratio ) ) 
                   zprofed(ji,jj,jk) = fecdm * zprmaxd(ji,jj,jk) * ( 1.0 - fr_i(ji,jj) )  &
@@ -294,27 +309,30 @@ CONTAINS
          DO jj = 1, jpj
            DO ji =1 ,jpi
               IF( etot_ndcy(ji,jj,jk) > 1.E-3 ) THEN
-                 zproreg  = zprorcan(ji,jj,jk) - zpronewn(ji,jj,jk)
-                 zproreg2 = zprorcad(ji,jj,jk) - zpronewd(ji,jj,jk)
+                 zproregn(ji,jj,jk) = zprorcan(ji,jj,jk) - zprono3n(ji,jj,jk) - zprono2n(ji,jj,jk)
+                 zproregd(ji,jj,jk) = zprorcad(ji,jj,jk) - zprono3d(ji,jj,jk) - zprono2d(ji,jj,jk)
                  zdocprod = excretd * zprorcad(ji,jj,jk) + excretn * zprorcan(ji,jj,jk)
                  tra(ji,jj,jk,jppo4) = tra(ji,jj,jk,jppo4) - zprorcan(ji,jj,jk) - zprorcad(ji,jj,jk)
-                 tra(ji,jj,jk,jpno3) = tra(ji,jj,jk,jpno3) - zpronewn(ji,jj,jk) - zpronewd(ji,jj,jk)
-                 tra(ji,jj,jk,jpnh4) = tra(ji,jj,jk,jpnh4) - zproreg - zproreg2
+                 tra(ji,jj,jk,jpno3) = tra(ji,jj,jk,jpno3) - zprono3n(ji,jj,jk) - zprono3d(ji,jj,jk)
+                 tra(ji,jj,jk,jpno2) = tra(ji,jj,jk,jpno2) - zprono2n(ji,jj,jk) - zprono2d(ji,jj,jk)
+                 tra(ji,jj,jk,jpnh4) = tra(ji,jj,jk,jpnh4) - zproregn(ji,jj,jk) - zproregd(ji,jj,jk)
                  tra(ji,jj,jk,jpphy) = tra(ji,jj,jk,jpphy) + zprorcan(ji,jj,jk) * texcretn
                  tra(ji,jj,jk,jpnfe) = tra(ji,jj,jk,jpnfe) + zprofen(ji,jj,jk) * texcretn
                  tra(ji,jj,jk,jpdia) = tra(ji,jj,jk,jpdia) + zprorcad(ji,jj,jk) * texcretd
                  tra(ji,jj,jk,jpdfe) = tra(ji,jj,jk,jpdfe) + zprofed(ji,jj,jk) * texcretd
                  tra(ji,jj,jk,jpdsi) = tra(ji,jj,jk,jpdsi) + zprorcad(ji,jj,jk) * zysopt(ji,jj,jk) * texcretd
                  tra(ji,jj,jk,jpdoc) = tra(ji,jj,jk,jpdoc) + zdocprod
-                 tra(ji,jj,jk,jpoxy) = tra(ji,jj,jk,jpoxy) + o2ut * ( zproreg + zproreg2) &
-                 &                   + ( o2ut + o2nit ) * ( zpronewn(ji,jj,jk) + zpronewd(ji,jj,jk) )
+                 tra(ji,jj,jk,jpoxy) = tra(ji,jj,jk,jpoxy) + o2ut * ( zproregn(ji,jj,jk) + zproregd(ji,jj,jk))  &
+                 &                     + ( o2ut + o2nit )  * ( zprono3n(ji,jj,jk) + zprono3d(ji,jj,jk)          &
+                 &                     + zprono2n(ji,jj,jk) + zprono2d(ji,jj,jk) )
                  !
                  zfeup = texcretn * zprofen(ji,jj,jk) + texcretd * zprofed(ji,jj,jk)
                  tra(ji,jj,jk,jpfer) = tra(ji,jj,jk,jpfer) - zfeup
                  tra(ji,jj,jk,jpsil) = tra(ji,jj,jk,jpsil) - texcretd * zprorcad(ji,jj,jk) * zysopt(ji,jj,jk)
                  tra(ji,jj,jk,jpdic) = tra(ji,jj,jk,jpdic) - zprorcan(ji,jj,jk) - zprorcad(ji,jj,jk)
-                 tra(ji,jj,jk,jptal) = tra(ji,jj,jk,jptal) + rno3 * ( zpronewn(ji,jj,jk) + zpronewd(ji,jj,jk) ) &
-                 &                                         - rno3 * ( zproreg + zproreg2 )
+                 tra(ji,jj,jk,jptal) = tra(ji,jj,jk,jptal) + rno3 * ( zprono3n(ji,jj,jk) + zprono3d(ji,jj,jk)   &
+                 &                     + zprono2n(ji,jj,jk) + zprono2d(ji,jj,jk) )                              &
+                 &                     - rno3 * ( zproregn(ji,jj,jk) + zproregd(ji,jj,jk) )
               ENDIF
            END DO
         END DO
@@ -355,11 +373,18 @@ CONTAINS
               CALL iom_put( "PPPHYD"  , zw3d )
           ENDIF
           IF( iom_use( "PPNEWN" ) .OR. iom_use( "PPNEWD" ) )  THEN
-              zw3d(:,:,:) = zpronewn(:,:,:) * zfact * tmask(:,:,:)  ! new primary production by nanophyto
+              zw3d(:,:,:) = (zprono3n(:,:,:) + zprono2n(:,:,:)) * zfact * tmask(:,:,:)  ! new primary production by nanophyto
               CALL iom_put( "PPNEWN"  , zw3d )
               !
-              zw3d(:,:,:) = zpronewd(:,:,:) * zfact * tmask(:,:,:)  ! new primary production by diatomes
+              zw3d(:,:,:) = (zprono3d(:,:,:) + zprono2d(:,:,:)) * zfact * tmask(:,:,:)  ! new primary production by diatomes
               CALL iom_put( "PPNEWD"  , zw3d )
+          ENDIF
+          IF( iom_use( "PPNO2N" ) .OR. iom_use( "PPNO2D" ) )  THEN
+              zw3d(:,:,:) = zprono2n(:,:,:) * zfact * tmask(:,:,:)  ! NO2 primary production by nanophyto
+              CALL iom_put( "PPNO2N"  , zw3d )
+              !
+              zw3d(:,:,:) = zprono2d(:,:,:) * zfact * tmask(:,:,:)  ! NO2 primary production by diatomes
+              CALL iom_put( "PPNO2D"  , zw3d )
           ENDIF
           IF( iom_use( "PBSi" ) )  THEN
               zw3d(:,:,:) = zprorcad(:,:,:) * zfact * tmask(:,:,:) * zysopt(:,:,:) ! biogenic silica production
@@ -403,7 +428,7 @@ CONTAINS
               CALL iom_put( "TPP"  , zw3d )
           ENDIF
           IF( iom_use( "TPNEW" ) )  THEN
-              zw3d(:,:,:) = ( zpronewn(:,:,:) + zpronewd(:,:,:) ) * zfact * tmask(:,:,:)  ! total new production
+              zw3d(:,:,:) = ( zprono3n(:,:,:) + zprono3d(:,:,:) + zprono2n(:,:,:) + zprono2d(:,:,:) ) * zfact * tmask(:,:,:)  ! total new production
               CALL iom_put( "TPNEW"  , zw3d )
           ENDIF
           IF( iom_use( "TPBFE" ) )  THEN
@@ -433,7 +458,7 @@ CONTAINS
           IF( iom_use( "INTPNEW" ) ) THEN    
              zw2d(:,:) = 0.
              DO jk = 1, jpkm1
-                zw2d(:,:) = zw2d(:,:) + ( zpronewn(:,:,jk) + zpronewd(:,:,jk) ) * e3t_n(:,:,jk) * zfact * tmask(:,:,jk)  ! vert. integrated new prod
+                zw2d(:,:) = zw2d(:,:) + ( zprono3n(:,:,jk) + zprono3d(:,:,jk) + zprono2n(:,:,jk) + zprono2d(:,:,jk) ) * e3t_n(:,:,jk) * zfact * tmask(:,:,jk)  ! vert. integrated new prod
              ENDDO
              CALL iom_put( "INTPNEW" , zw2d )
           ENDIF
