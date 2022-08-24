@@ -90,6 +90,7 @@ CONTAINS
       REAL(wp) ::   z1_trbdia, z1_trbphy, ztem1, ztem2, zetot1, zetot2
       REAL(wp) ::   zdenom, zratio, zironmin
       REAL(wp) ::   zconc1d, zconc1dnh4, zconc0n, zconc0nnh4   
+      REAL(wp) ::   zlimnh4, zlimno3, znutlimtot, zbactnh4, zbactno3
       !!---------------------------------------------------------------------
       !
       IF( ln_timing )   CALL timing_start('p4z_lim')
@@ -123,13 +124,19 @@ CONTAINS
                zconc0n           = MAX( concnno3, ( zconcn2 * concnno3 + concnno3 * xsizern * zconcn ) * z1_trbphy )
                zconc0nnh4        = MAX( concnnh4, ( zconcn2 * concnnh4 + concnnh4 * xsizern * zconcn ) * z1_trbphy )
 
+               ! Total oxidised inorganic nitrogen
+               zton = trb(ji,jj,jk,jpno2) + trb(ji,jj,jk,jpno3)
+
                ! Michaelis-Menten Limitation term for nutrients Small bacteria
                ! -------------------------------------------------------------
-               zdenom = 1. /  ( concbno3 * concbnh4 + concbnh4 * trb(ji,jj,jk,jpno3) + concbno3 * trb(ji,jj,jk,jpnh4) )
-               xnanono3(ji,jj,jk) = trb(ji,jj,jk,jpno3) * concbnh4 * zdenom
-               xnanonh4(ji,jj,jk) = trb(ji,jj,jk,jpnh4) * concbno3 * zdenom
+               zlimnh4 = trb(ji,jj,jk,jpnh4) / ( concbno3 + trb(ji,jj,jk,jpnh4))
+               zlimno3 = zton / ( concbno3 + zton)
+               znutlimtot = ( trb(ji,jj,jk,jpnh4) + zton ) / (concbno3 + trb(ji,jj,jk,jpnh4) + zton )
+
+               zbactnh4 = znutlimtot * 5.0 * zlimnh4 / ( zlimno3 + 5.0 * zlimnh4 + rtrn )
+               zbactno3 = znutlimtot * zlimno3 / ( zlimno3 + 5.0 * zlimnh4 + rtrn )
                !
-               zlim1    = xnanono3(ji,jj,jk) + xnanonh4(ji,jj,jk)
+               zlim1    = zbactno3 + zbactnh4
                zlim2    = trb(ji,jj,jk,jppo4) / ( trb(ji,jj,jk,jppo4) + concbnh4 )
                zlim3    = trb(ji,jj,jk,jpfer) / ( concbfe + trb(ji,jj,jk,jpfer) )
                zlim4    = trb(ji,jj,jk,jpdoc) / ( xkdoc   + trb(ji,jj,jk,jpdoc) )
@@ -138,13 +145,16 @@ CONTAINS
 
                ! Michaelis-Menten Limitation term for nutrients Small flagellates
                ! -----------------------------------------------
-               zdenom = 1. /  ( zconc0n * zconc0nnh4 + zconc0nnh4 * trb(ji,jj,jk,jpno3) + zconc0n * trb(ji,jj,jk,jpnh4) )
-               xnanono3(ji,jj,jk) = trb(ji,jj,jk,jpno3) * zconc0nnh4 * zdenom
-               xnanonh4(ji,jj,jk) = trb(ji,jj,jk,jpnh4) * zconc0n    * zdenom
+               zlimnh4 = trb(ji,jj,jk,jpnh4) / ( zconc0n + trb(ji,jj,jk,jpnh4) )
+               zlimno3 = zton / ( zconc0n + zton )
+               znutlimtot = ( trb(ji,jj,jk,jpnh4) + zton ) / ( zconc0n + trb(ji,jj,jk,jpnh4) + zton )
+
+               xnanonh4(ji,jj,jk) = znutlimtot * 5.0 * zlimnh4 / ( zlimno3 + 5.0 * zlimnh4 + rtrn )
+               xnanono3(ji,jj,jk) = znutlimtot * zlimno3 / ( zlimno3 + 5.0 * zlimnh4 + rtrn )
                !
                zlim1    = xnanono3(ji,jj,jk) + xnanonh4(ji,jj,jk)
                zlim2    = trb(ji,jj,jk,jppo4) / ( trb(ji,jj,jk,jppo4) + zconc0nnh4 )
-               zratio   = trb(ji,jj,jk,jpnfe) * z1_trbphy 
+               zratio   = trb(ji,jj,jk,jpnfe) * z1_trbphy
                zironmin = xcoef1 * trb(ji,jj,jk,jpnch) * z1_trbphy + xcoef2 * zlim1 + xcoef3 * xnanono3(ji,jj,jk)
                zlim3    = MAX( 0.,( zratio - zironmin ) / qnfelim )
                xnanopo4(ji,jj,jk) = zlim2
@@ -153,9 +163,12 @@ CONTAINS
                !
                !   Michaelis-Menten Limitation term for nutrients Diatoms
                !   ----------------------------------------------
-               zdenom   = 1. / ( zconc1d * zconc1dnh4 + zconc1dnh4 * trb(ji,jj,jk,jpno3) + zconc1d * trb(ji,jj,jk,jpnh4) )
-               xdiatno3(ji,jj,jk) = trb(ji,jj,jk,jpno3) * zconc1dnh4 * zdenom
-               xdiatnh4(ji,jj,jk) = trb(ji,jj,jk,jpnh4) * zconc1d    * zdenom
+               zlimnh4 = trb(ji,jj,jk,jpnh4) / ( zconc1d + trb(ji,jj,jk,jpnh4) )
+               zlimno3 = zton / ( zconc1d + zton )
+               znutlimtot = ( trb(ji,jj,jk,jpnh4) + zton ) / ( zconc1d + trb(ji,jj,jk,jpnh4) + zton )
+
+               xdiatnh4(ji,jj,jk) = znutlimtot * 5.0 * zlimnh4 / ( zlimno3 + 5.0 * zlimnh4 + rtrn )
+               xdiatno3(ji,jj,jk) = znutlimtot * zlimno3 / ( zlimno3 + 5.0 * zlimnh4 + rtrn )
                !
                zlim1    = xdiatno3(ji,jj,jk) + xdiatnh4(ji,jj,jk)
                zlim2    = trb(ji,jj,jk,jppo4) / ( trb(ji,jj,jk,jppo4) + zconc1dnh4  )
@@ -176,8 +189,9 @@ CONTAINS
       DO jk = 1, jpkm1
          DO jj = 1, jpj
             DO ji = 1, jpi
-               zlim1 =  ( trb(ji,jj,jk,jpno3) * concnnh4 + trb(ji,jj,jk,jpnh4) * concnno3 )    &
-                  &   / ( concnno3 * concnnh4 + concnnh4 * trb(ji,jj,jk,jpno3) + concnno3 * trb(ji,jj,jk,jpnh4) ) 
+               zton = trb(ji,jj,jk,jpno2) + trb(ji,jj,jk,jpno3) ! total oxidised nitrogen
+               zlim1 =  ( zton * concnnh4 + trb(ji,jj,jk,jpnh4) * concnno3 )    &
+                  &   / ( concnno3 * concnnh4 + concnnh4 * zton + concnno3 * trb(ji,jj,jk,jpnh4) )
                zlim2  = trb(ji,jj,jk,jppo4) / ( trb(ji,jj,jk,jppo4) + concnnh4 )
                zlim3  = trb(ji,jj,jk,jpfer) / ( trb(ji,jj,jk,jpfer) +  5.E-11   )
                ztem1  = MAX( 0., tsn(ji,jj,jk,jp_tem) )
@@ -206,8 +220,9 @@ CONTAINS
                nitrfac(ji,jj,jk) = MIN( 1., nitrfac(ji,jj,jk) )
                !
                ! denitrification factor computed from NO3 levels
-               nitrfac2(ji,jj,jk) = MAX( 0.e0,       ( 1.E-6 - trb(ji,jj,jk,jpno3) )  &
-                  &                                / ( 1.E-6 + trb(ji,jj,jk,jpno3) ) )
+               zton = trb(ji,jj,jk,jpno2) + trb(ji,jj,jk,jpno3) ! total oxidised nitrogen
+               nitrfac2(ji,jj,jk) = MAX( 0.e0,       ( 1.E-6 - zton )  &
+                  &                                / ( 1.E-6 + zton ) )
                nitrfac2(ji,jj,jk) = MIN( 1., nitrfac2(ji,jj,jk) )
             END DO
          END DO
