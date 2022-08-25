@@ -48,14 +48,18 @@ MODULE p4zrem
    REAL(wp), PUBLIC ::   nob_y_no2  !: Yield for NOB growth on NO2
    REAL(wp), PUBLIC ::   nob_y_oxy  !: Yield for NOB growth on O2
    REAL(wp), PUBLIC ::   nob_CN     !: Carbon:Nitrogen ratio for NOB
+   REAL(wp), PUBLIC ::   aox_mumax  !: Maximum growth rate of AOA
+   REAL(wp), PUBLIC ::   aox_y_nh4  !: Yield for AOX growth on NH4
+   REAL(wp), PUBLIC ::   aox_y_no2  !: Yield for AOX growth on NO2
+   REAL(wp), PUBLIC ::   aox_p_no3  !: Yield for AOX growth on NO3
 
    REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   zonitraoa    !: ammonia oxidiser growth array
-   REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   zonitrnob    !: nitrite oxidiser growth array
+   REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   zonitrnob    !: ammonia oxidiser growth array
+   REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   zonitraox    !: anammox growth array
    REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   denitr       !: full denitrification array
    REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   denitrno3    !: denitrification (NO3-->NO2) array
    REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   denitrno2    !: denitrification (NO2-->N2) array
    REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   zaltrem      !: anaerobic remin without O2, NO3 or NO2
-   REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   zanammox     !: anammox array (NH4+NO2-->N2)
 
 
    !!----------------------------------------------------------------------
@@ -85,7 +89,7 @@ CONTAINS
       CHARACTER (len=25) :: charout
       REAL(wp), DIMENSION(jpi,jpj    ) :: ztempbac
       REAL(wp), DIMENSION(jpi,jpj,jpk) :: zdepbac, zolimi, zdepprod, zfacsi, zfacsib, zdepeff, zfebact
-      REAL(wp), DIMENSION(jpi,jpj,jpk) :: mu_aoa, mu_nob
+      REAL(wp), DIMENSION(jpi,jpj,jpk) :: mu_aoa, mu_nob, mu_aox
       REAL(wp), ALLOCATABLE, DIMENSION(:,:,:) :: zw3d
       !!---------------------------------------------------------------------
       !
@@ -100,6 +104,7 @@ CONTAINS
       zfacsi(:,:,:)   = xsilab
       mu_aoa(:,:,:)   = 0.0
       mu_nob(:,:,:)   = 0.0
+      mu_aox(:,:,:)   = 0.0
 
       ! Computation of the mean phytoplankton concentration as
       ! a crude estimate of the bacterial biomass
@@ -231,13 +236,18 @@ CONTAINS
       DO jk = 1, jpkm1
          DO jj = 1, jpj
             DO ji = 1, jpi
-               ! NH4 nitrification to NO3. Ceased for oxygen concentrations
-               ! below 2 umol/L. Inhibited at strong light 
-               ! ----------------------------------------------------------
+               !! NH4 nitrification to NO3. Ceased for oxygen concentrations
+               !! below 2 umol/L. Inhibited at strong light 
+               !! ----------------------------------------------------------
                !zonitrnh4(ji,jj,jk)  = nitrif * xstep * trb(ji,jj,jk,jpnh4) * (1.- nitrfac(ji,jj,jk) )  &
                !&                      / ( 1.+ emoy(ji,jj,jk) ) * ( 1. +fr_i(ji,jj) * emoy(ji,jj,jk) )
                !zonitrno2(ji,jj,jk)  = nitrif * xstep * trb(ji,jj,jk,jpno2) * (1.- nitrfac(ji,jj,jk) )  &
                !&                      / ( 1.+ emoy(ji,jj,jk) ) * ( 1. +fr_i(ji,jj) * emoy(ji,jj,jk) )
+               !! Loss of NH4 and NO2 due to anammox
+               !! ----------------------------------------------------------
+               !zanammox(ji,jj,jk) = 0.01 * xstep * trb(ji,jj,jk,jpnh4) * nitrfac(ji,jj,jk)
+               !zanammox(ji,jj,jk) = max(0.0, min(  ( trb(ji,jj,jk,jpno2) - rtrn ) / 1.3, zanammox(ji,jj,jk) ) )
+               !         ! 1.3 mol of NO2 required per mol of NH4 oxidised by anammox (Brunner et al., 2013 PNAS)
 
                !~~~~~~~~~~~~~~~~~~~~~~~!
                !!! Ammonia oxidation !!!
@@ -262,30 +272,37 @@ CONTAINS
                  ! Calculate nitrite oxidiser biomass accumulation rate
                zonitrnob(ji,jj,jk)  = mu_nob(ji,jj,jk) * xstep * trb(ji,jj,jk,jpnob)  ! mmol C / ts
 
-               ! Loss of NH4 and NO2 due to anammox
-               ! ----------------------------------------------------------
-               zanammox(ji,jj,jk) = 0.01 * xstep * trb(ji,jj,jk,jpnh4) * nitrfac(ji,jj,jk)
-               zanammox(ji,jj,jk) = max(0.0, min(  ( trb(ji,jj,jk,jpno2) - rtrn ) / 1.3, zanammox(ji,jj,jk) ) )
-                        ! 1.3 mol of NO2 required per mol of NH4 oxidised by anammox (Brunner et al., 2013 PNAS)
- 
+               !~~~~~~~~~~~~~!
+               !!! Anammox !!!
+               !~~~~~~~~~~~~~!
+                 ! Get uptake rates of oxygen and nitrite
+               zuptnh4 = ( aox_mumax / aox_y_nh4 ) * xaoxnh4(ji,jj,jk)  ! mmol NH4 / mmol C / day
+               zuptno2 = ( aox_mumax / aox_y_no2 ) * xaoxno2(ji,jj,jk)  ! mmol NO2 / mmol C / day
+                 ! Calculate growth rate (Liebig Law of min)
+               mu_aox(ji,jj,jk) = MAX(0.0, MIN( zuptnh4 * aox_y_nh4, zuptno2 * aox_y_no2 ))  ! /day
+                 ! Calculate nitrite oxidiser biomass accumulation rate
+               zonitraox(ji,jj,jk)  = mu_aox(ji,jj,jk) * xstep * trb(ji,jj,jk,jpaox)  ! mmol C / ts
+
                ! Update of the tracers trends (rno3 normalises NH4, NO2 and NO3 back to carbon units)
                ! ----------------------------
                tra(ji,jj,jk,jpaoa) = tra(ji,jj,jk,jpaoa) + zonitraoa(ji,jj,jk) 
                tra(ji,jj,jk,jpnob) = tra(ji,jj,jk,jpnob) + zonitrnob(ji,jj,jk)
+               tra(ji,jj,jk,jpaox) = tra(ji,jj,jk,jpaox) + zonitraox(ji,jj,jk) 
                tra(ji,jj,jk,jpnh4) = tra(ji,jj,jk,jpnh4) - (zonitraoa(ji,jj,jk)/aoa_y_nh4) / rno3      &
                &                     - (zonitrnob(ji,jj,jk)/nob_CN) / rno3                             &
-               &                     - zanammox(ji,jj,jk)
+               &                     - (zonitraox(ji,jj,jk)/aox_y_nh4) / rno3
                tra(ji,jj,jk,jpno2) = tra(ji,jj,jk,jpno2)                                               &
                &                     + ( zonitraoa(ji,jj,jk) * (1./aoa_y_nh4 - 1./aoa_CN) ) / rno3     &
                &                     - (zonitrnob(ji,jj,jk)/nob_y_no2) / rno3                          &  
-               &                     - zanammox(ji,jj,jk)*1.3
+               &                     - (zonitraox(ji,jj,jk)/aox_y_no2) / rno3
                tra(ji,jj,jk,jpno3) = tra(ji,jj,jk,jpno3)                                               &
                &                     + (zonitrnob(ji,jj,jk)/nob_y_no2) / rno3                          &
-               &                     + zanammox(ji,jj,jk)*0.3
+               &                     + (zonitraox(ji,jj,jk)*aox_p_no3) / rno3
                tra(ji,jj,jk,jpoxy) = tra(ji,jj,jk,jpoxy)                                               &
                &                     - zonitraoa(ji,jj,jk)/aoa_y_oxy                                   &
                &                     - zonitrnob(ji,jj,jk)/nob_y_oxy
-               tra(ji,jj,jk,jpdic) = tra(ji,jj,jk,jpdic) - zonitraoa(ji,jj,jk) - zonitrnob(ji,jj,jk)
+               tra(ji,jj,jk,jpdic) = tra(ji,jj,jk,jpdic) - zonitraoa(ji,jj,jk) - zonitrnob(ji,jj,jk)   &
+               &                     - zonitraox(ji,jj,jk)
                tra(ji,jj,jk,jptal) = tra(ji,jj,jk,jptal)                                               &
                &                     - zonitraoa(ji,jj,jk)/aoa_y_nh4                                   &
                &                     - zonitraoa(ji,jj,jk) * (1./aoa_y_nh4 - 1./aoa_CN)
@@ -395,7 +412,7 @@ CONTAINS
               CALL iom_put( "DENITNO2"  , zw3d )
           ENDIF
           IF( iom_use( "ANAMMOX" ) )  THEN
-              zw3d(:,:,:) = zanammox(:,:,:) * rno3 * tmask(:,:,:) * zfact ! Denitrification
+              zw3d(:,:,:) = zonitraox(:,:,:)/aox_y_nh4 * tmask(:,:,:) * zfact ! Denitrification
               CALL iom_put( "ANAMMOX"  , zw3d )
           ENDIF
           IF( iom_use( "ALTREM" ) )  THEN
@@ -434,7 +451,8 @@ CONTAINS
       NAMELIST/nampisrem/ xremik, nitrif, xsirem, xsiremlab, xsilab, feratb, xkferb, & 
          &                xremikc, xremikn, xremikp, aoa_pocoef, aoa_mumax,          &
          &                aoa_y_nh4, aoa_y_oxy, aoa_CN, nob_pocoef, nob_mumax,       &
-         &                nob_y_no2, nob_y_oxy, nob_CN
+         &                nob_y_no2, nob_y_oxy, nob_CN, aox_mumax, aox_y_nh4,        &
+         &                aox_y_no2, aox_p_no3
       INTEGER :: ios                 ! Local integer output status for namelist read
       !!----------------------------------------------------------------------
       !
@@ -477,15 +495,19 @@ CONTAINS
          WRITE(numout,*) '      NOB biomass yield on NO2 (mol C / mol NO2) nob_y_no2 =', nob_y_no2
          WRITE(numout,*) '      NOB biomass yield on O2 (mol C / mol O2)  nob_y_oxy =', nob_y_oxy
          WRITE(numout,*) '      NOB Carbon:Nitrogen ratio of biomass      nob_CN    =', nob_CN
+         WRITE(numout,*) '      AOX maximum growth rate (/day)            aox_mumax =', aox_mumax
+         WRITE(numout,*) '      AOX biomass yield on NH4 (mol C / mol NH4) aox_y_nh4 =', aox_y_nh4
+         WRITE(numout,*) '      AOX biomass yield on NO2 (mol C / mol NO2) aox_y_no2 =', aox_y_no2
+         WRITE(numout,*) '      AOX NO3 produced per Bio (mol NO3 / mol C) aox_p_no3 =', aox_p_no3
       ENDIF
       !
       zonitraoa(:,:,:) = 0._wp
       zonitrnob(:,:,:) = 0._wp
+      zonitraox(:,:,:) = 0._wp
       denitr(:,:,:) = 0._wp
       denitrno3(:,:,:) = 0._wp
       denitrno2(:,:,:) = 0._wp
       zaltrem(:,:,:) = 0._wp
-      zanammox(:,:,:) = 0._wp
       !
    END SUBROUTINE p4z_rem_init
 
@@ -494,9 +516,9 @@ CONTAINS
       !!----------------------------------------------------------------------
       !!                     ***  ROUTINE p4z_rem_alloc  ***
       !!----------------------------------------------------------------------
-      ALLOCATE( zonitraoa(jpi,jpj,jpk), zonitrnob(jpi,jpj,jpk),denitr(jpi,jpj,jpk),   &
-      &         denitrno3(jpi,jpj,jpk), denitrno2(jpi,jpj,jpk),zaltrem(jpi,jpj,jpk),  &
-      &         zanammox(jpi,jpj,jpk), STAT=p4z_rem_alloc )
+      ALLOCATE( zonitraoa(jpi,jpj,jpk), zonitrnob(jpi,jpj,jpk), zonitraox(jpi,jpj,jpk), &
+      &         denitr(jpi,jpj,jpk), denitrno3(jpi,jpj,jpk), denitrno2(jpi,jpj,jpk),    &
+      &         zaltrem(jpi,jpj,jpk), STAT=p4z_rem_alloc )
       !
       IF( p4z_rem_alloc /= 0 )   CALL ctl_stop( 'STOP', 'p4z_rem_alloc: failed to allocate arrays' )
       !
