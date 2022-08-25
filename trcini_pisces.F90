@@ -168,6 +168,8 @@ CONTAINS
         IF( cltra == 'PCHL'     )   jppch = jn      !: Diatoms Chlorophyll Concentration
         IF( cltra == 'PFe'      )   jppfe = jn      !: Picophytoplankton Fe biomass
         IF( cltra == 'LGW'      )   jplgw = jn      !: Weak ligands
+        IF( cltra == 'NAR'      )   jpnar = jn      !: Nitrate reducing facultative heterotrophs C concentration
+        IF( cltra == 'NIR'      )   jpnir = jn      !: Nitrite reducing facultative heterotrophs C concentration
         IF( cltra == 'AOA'      )   jpaoa = jn      !: Ammonia oxidising archaea C concentration
         IF( cltra == 'NOB'      )   jpnob = jn      !: Nitrite oxidising bacteria C concentration
         IF( cltra == 'AOX'      )   jpaox = jn      !: Anammox bacteria C concentration
@@ -217,6 +219,8 @@ CONTAINS
          trn(:,:,:,jpno3) = no3
          trn(:,:,:,jpno2) = bioma0
          trn(:,:,:,jpnh4) = bioma0
+         trn(:,:,:,jpnar) = bioma0
+         trn(:,:,:,jpnir) = bioma0
          trn(:,:,:,jpaoa) = bioma0
          trn(:,:,:,jpnob) = bioma0
          trn(:,:,:,jpaox) = bioma0

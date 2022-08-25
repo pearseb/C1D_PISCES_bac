@@ -443,7 +443,8 @@ CONTAINS
                &          +   trn(:,:,:,jpphy) + trn(:,:,:,jpdia)                      &
                &          +   trn(:,:,:,jppoc) + trn(:,:,:,jpgoc) + trn(:,:,:,jpdoc)   &        
                &          +   trn(:,:,:,jpzoo) + trn(:,:,:,jpmes)                      & 
-               &          +   trn(:,:,:,jpaoa) + trn(:,:,:,jpnob) + trn(:,:,:,jpaox)
+               &          +   trn(:,:,:,jpaoa) + trn(:,:,:,jpnob) + trn(:,:,:,jpaox)   &
+               &          +   trn(:,:,:,jpnar) + trn(:,:,:,jpnir)
         ELSE
             zwork(:,:,:) =    trn(:,:,:,jpno3) + trn(:,:,:,jpnh4) + trn(:,:,:,jpno2)   &
                &          +   trn(:,:,:,jpnph) + trn(:,:,:,jpndi) + trn(:,:,:,jpnpi)   & 
@@ -462,7 +463,8 @@ CONTAINS
                &          +   trn(:,:,:,jpphy) + trn(:,:,:,jpdia)                      &
                &          +   trn(:,:,:,jppoc) + trn(:,:,:,jpgoc)  + trn(:,:,:,jpdoc)  &        
                &          +   trn(:,:,:,jpzoo) + trn(:,:,:,jpmes)                      &
-               &          +   trn(:,:,:,jpaoa) + trn(:,:,:,jpnob) + trn(:,:,:,jpaox) 
+               &          +   trn(:,:,:,jpaoa) + trn(:,:,:,jpnob) + trn(:,:,:,jpaox)   & 
+               &          +   trn(:,:,:,jpnar) + trn(:,:,:,jpnir) 
         ELSE
             zwork(:,:,:) =    trn(:,:,:,jppo4) + trn(:,:,:,jppph)                      &
                &          +   trn(:,:,:,jppdi) + trn(:,:,:,jpppi)                      & 

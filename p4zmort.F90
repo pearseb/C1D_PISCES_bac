@@ -215,10 +215,10 @@ CONTAINS
       !! ** Method  : - ???
       !!---------------------------------------------------------------------
       INTEGER  ::   ji, jj, jk
-      REAL(wp) ::   zcompaoa, zcompnob, zcompaox
-      REAL(wp) ::   zmoraoa, zmornob, zmoraox
-      REAL(wp) ::   zresaoa, zresnob, zresaox
-      REAL(wp) ::   zmortaoa, zmortnob, zmortaox
+      REAL(wp) ::   zcompaoa, zcompnob, zcompaox, zcompnar, zcompnir
+      REAL(wp) ::   zmoraoa, zmornob, zmoraox, zmornar, zmornir
+      REAL(wp) ::   zresaoa, zresnob, zresaox, zresnar, zresnir
+      REAL(wp) ::   zmortaoa, zmortnob, zmortaox, zmortnar, zmortnir
       CHARACTER (len=25) ::   charout
       !!---------------------------------------------------------------------
       !
@@ -232,27 +232,38 @@ CONTAINS
                zcompaoa = MAX( ( trb(ji,jj,jk,jpaoa) - 1e-8 ), 0.e0 )
                zcompnob = MAX( ( trb(ji,jj,jk,jpnob) - 1e-8 ), 0.e0 )
                zcompaox = MAX( ( trb(ji,jj,jk,jpaox) - 1e-8 ), 0.e0 )
+               zcompnar = MAX( ( trb(ji,jj,jk,jpnar) - 1e-8 ), 0.e0 )
+               zcompnir = MAX( ( trb(ji,jj,jk,jpnir) - 1e-8 ), 0.e0 )
 
                !  Squared mortality
                zmoraoa = bmort * 1.e6 * xstep * xdiss(ji,jj,jk) * zcompaoa * trb(ji,jj,jk,jpaoa) 
                zmornob = bmort * 1.e6 * xstep * xdiss(ji,jj,jk) * zcompnob * trb(ji,jj,jk,jpnob) 
                zmoraox = bmort * 1.e6 * xstep * xdiss(ji,jj,jk) * zcompaox * trb(ji,jj,jk,jpaox) 
+               zmornar = bmort * 1.e6 * xstep * xdiss(ji,jj,jk) * zcompnar * trb(ji,jj,jk,jpnar) 
+               zmornir = bmort * 1.e6 * xstep * xdiss(ji,jj,jk) * zcompnir * trb(ji,jj,jk,jpnir) 
 
                !  Linear respiration term
                zresaoa = bresp * xstep * trb(ji,jj,jk,jpaoa) * zcompaoa / ( xkmort + trb(ji,jj,jk,jpaoa) )
                zresnob = bresp * xstep * trb(ji,jj,jk,jpnob) * zcompnob / ( xkmort + trb(ji,jj,jk,jpnob) )
                zresaox = bresp * xstep * trb(ji,jj,jk,jpaox) * zcompaox / ( xkmort + trb(ji,jj,jk,jpaox) )
+               zresnar = bresp * xstep * trb(ji,jj,jk,jpnar) * zcompnar / ( xkmort + trb(ji,jj,jk,jpnar) )
+               zresnir = bresp * xstep * trb(ji,jj,jk,jpnir) * zcompnir / ( xkmort + trb(ji,jj,jk,jpnir) )
 
                !  Total loss
                zmortaoa = zmoraoa + zresaoa
                zmortnob = zmornob + zresnob
                zmortaox = zmoraox + zresaox
+               zmortnar = zmornar + zresnar
+               zmortnir = zmornir + zresnir
 
                !   Update the arrays TRA which contains the biological sources and sinks
                tra(ji,jj,jk,jpaoa) = tra(ji,jj,jk,jpaoa) - zmortaoa
                tra(ji,jj,jk,jpnob) = tra(ji,jj,jk,jpnob) - zmortnob
                tra(ji,jj,jk,jpaox) = tra(ji,jj,jk,jpaox) - zmortaox
-               tra(ji,jj,jk,jppoc) = tra(ji,jj,jk,jppoc) + zmortaoa + zmortnob + zmortaox
+               tra(ji,jj,jk,jpnar) = tra(ji,jj,jk,jpnar) - zmortnar
+               tra(ji,jj,jk,jpnir) = tra(ji,jj,jk,jpnir) - zmortnir
+               tra(ji,jj,jk,jppoc) = tra(ji,jj,jk,jppoc) + zmortaoa + zmortnob + zmortaox   &
+               &                     + zmortnar + zmortnir
 
             END DO
          END DO

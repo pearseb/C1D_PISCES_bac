@@ -56,6 +56,8 @@ MODULE par_pisces
    INTEGER, PUBLIC ::   jpgon     !: Big nitrogen particles Concentration
    INTEGER, PUBLIC ::   jpgop     !: Big phosphorus particles Concentration
    INTEGER, PUBLIC ::   jplgw     !: Weak Ligands
+   INTEGER, PUBLIC ::   jpnar     !: nitrate reducing facultative heterotrophs concentration 
+   INTEGER, PUBLIC ::   jpnir     !: nitrite reducing facultative heterotrophs concentration 
    INTEGER, PUBLIC ::   jpaoa     !: ammonia oxidising archaea concentration 
    INTEGER, PUBLIC ::   jpnob     !: nitrite oxidising bacteria concentration 
    INTEGER, PUBLIC ::   jpaox     !: anammox bacteria concentration 
