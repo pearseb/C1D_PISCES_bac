@@ -285,6 +285,7 @@ CONTAINS
                tra(ji,jj,jk,jpoxy) = tra(ji,jj,jk,jpoxy)                                               &
                &                     - zonitraoa(ji,jj,jk)/aoa_y_oxy                                   &
                &                     - zonitrnob(ji,jj,jk)/nob_y_oxy
+               tra(ji,jj,jk,jpdic) = tra(ji,jj,jk,jpdic) - zonitraoa(ji,jj,jk) - zonitrnob(ji,jj,jk)
                tra(ji,jj,jk,jptal) = tra(ji,jj,jk,jptal)                                               &
                &                     - zonitraoa(ji,jj,jk)/aoa_y_nh4                                   &
                &                     - zonitraoa(ji,jj,jk) * (1./aoa_y_nh4 - 1./aoa_CN)

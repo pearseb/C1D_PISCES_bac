@@ -27,6 +27,8 @@ MODULE p4zmort
    REAL(wp), PUBLIC ::   wchldm   !:
    REAL(wp), PUBLIC ::   mprat    !:
    REAL(wp), PUBLIC ::   mprat2   !:
+   REAL(wp), PUBLIC ::   bmort   !:
+   REAL(wp), PUBLIC ::   bresp   !:
 
    !!----------------------------------------------------------------------
    !! NEMO/TOP 4.0 , NEMO Consortium (2018)
@@ -50,6 +52,8 @@ CONTAINS
       CALL p4z_nano            ! nanophytoplankton
       !
       CALL p4z_diat            ! diatoms
+      !
+      CALL p4z_bact            ! bacteria
       !
    END SUBROUTINE p4z_mort
 
@@ -202,6 +206,67 @@ CONTAINS
       !
    END SUBROUTINE p4z_diat
 
+   SUBROUTINE p4z_bact
+      !!---------------------------------------------------------------------
+      !!                     ***  ROUTINE p4z_bact  ***
+      !!
+      !! ** Purpose :   Compute the mortality terms for different bacteria
+      !!
+      !! ** Method  : - ???
+      !!---------------------------------------------------------------------
+      INTEGER  ::   ji, jj, jk
+      REAL(wp) ::   zcompaoa, zcompnob, zcompaox
+      REAL(wp) ::   zmoraoa, zmornob, zmoraox
+      REAL(wp) ::   zresaoa, zresnob, zresaox
+      REAL(wp) ::   zmortaoa, zmortnob, zmortaox
+      CHARACTER (len=25) ::   charout
+      !!---------------------------------------------------------------------
+      !
+      IF( ln_timing )   CALL timing_start('p4z_bact')
+      !
+      DO jk = 1, jpkm1
+         DO jj = 1, jpj
+            DO ji = 1, jpi
+
+               ! Set minimum concentration beneath which no losses occur
+               zcompaoa = MAX( ( trb(ji,jj,jk,jpaoa) - 1e-8 ), 0.e0 )
+               zcompnob = MAX( ( trb(ji,jj,jk,jpnob) - 1e-8 ), 0.e0 )
+               zcompaox = MAX( ( trb(ji,jj,jk,jpaox) - 1e-8 ), 0.e0 )
+
+               !  Squared mortality
+               zmoraoa = bmort * 1.e6 * xstep * xdiss(ji,jj,jk) * zcompaoa * trb(ji,jj,jk,jpaoa) 
+               zmornob = bmort * 1.e6 * xstep * xdiss(ji,jj,jk) * zcompnob * trb(ji,jj,jk,jpnob) 
+               zmoraox = bmort * 1.e6 * xstep * xdiss(ji,jj,jk) * zcompaox * trb(ji,jj,jk,jpaox) 
+
+               !  Linear respiration term
+               zresaoa = bresp * xstep * trb(ji,jj,jk,jpaoa) * zcompaoa / ( xkmort + trb(ji,jj,jk,jpaoa) )
+               zresnob = bresp * xstep * trb(ji,jj,jk,jpnob) * zcompnob / ( xkmort + trb(ji,jj,jk,jpnob) )
+               zresaox = bresp * xstep * trb(ji,jj,jk,jpaox) * zcompaox / ( xkmort + trb(ji,jj,jk,jpaox) )
+
+               !  Total loss
+               zmortaoa = zmoraoa + zresaoa
+               zmortnob = zmornob + zresnob
+               zmortaox = zmoraox + zresaox
+
+               !   Update the arrays TRA which contains the biological sources and sinks
+               tra(ji,jj,jk,jpaoa) = tra(ji,jj,jk,jpaoa) - zmortaoa
+               tra(ji,jj,jk,jpnob) = tra(ji,jj,jk,jpnob) - zmortnob
+               tra(ji,jj,jk,jpaox) = tra(ji,jj,jk,jpaox) - zmortaox
+               tra(ji,jj,jk,jppoc) = tra(ji,jj,jk,jppoc) + zmortaoa + zmortnob + zmortaox
+
+            END DO
+         END DO
+      END DO
+      !
+       IF(ln_ctl)   THEN  ! print mean trends (used for debugging)
+         WRITE(charout, FMT="('bact')")
+         CALL prt_ctl_trc_info(charout)
+         CALL prt_ctl_trc(tab4d=tra, mask=tmask, clinfo=ctrcnm)
+       ENDIF
+      !
+      IF( ln_timing )   CALL timing_stop('p4z_bact')
+      !
+   END SUBROUTINE p4z_bact
 
    SUBROUTINE p4z_mort_init
       !!----------------------------------------------------------------------
@@ -217,7 +282,7 @@ CONTAINS
       !!----------------------------------------------------------------------
       INTEGER ::   ios   ! Local integer
       !
-      NAMELIST/namp4zmort/ wchl, wchld, wchldm, mprat, mprat2
+      NAMELIST/namp4zmort/ wchl, wchld, wchldm, mprat, mprat2, bmort, bresp
       !!----------------------------------------------------------------------
       !
       IF(lwp) THEN
@@ -241,6 +306,8 @@ CONTAINS
          WRITE(numout,*) '      maximum quadratic mortality of diatoms      wchldm =', wchldm
          WRITE(numout,*) '      phytoplankton mortality rate                mprat  =', mprat
          WRITE(numout,*) '      Diatoms mortality rate                      mprat2 =', mprat2
+         WRITE(numout,*) '      Bacteria quadratic mortality rate           bmort =', bmort
+         WRITE(numout,*) '      Bacteria linear respiration rate            bresp =', bresp
       ENDIF
       !
    END SUBROUTINE p4z_mort_init
