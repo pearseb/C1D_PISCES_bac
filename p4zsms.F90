@@ -92,6 +92,7 @@ CONTAINS
          IF(lwp) WRITE(numout,*) 
          IF(lwp) WRITE(numout,*) '    Passive Tracer  time step    rfact  = ', rfact, ' rdt = ', rdt
          IF(lwp) write(numout,*) '    PISCES  Biology time step    rfact2 = ', rfact2
+         IF(lwp) write(numout,*) '    PISCES  ts fration of day    xstep  = ', xstep
          IF(lwp) WRITE(numout,*)
       ENDIF
 
@@ -442,7 +443,7 @@ CONTAINS
                &          +   trn(:,:,:,jpphy) + trn(:,:,:,jpdia)                      &
                &          +   trn(:,:,:,jppoc) + trn(:,:,:,jpgoc) + trn(:,:,:,jpdoc)   &        
                &          +   trn(:,:,:,jpzoo) + trn(:,:,:,jpmes)                      & 
-               &          +   trn(:,:,:,jpaoa) + trn(:,:,:,jpnob)
+               &          +   trn(:,:,:,jpaoa) + trn(:,:,:,jpnob) + trn(:,:,:,jpaox)
         ELSE
             zwork(:,:,:) =    trn(:,:,:,jpno3) + trn(:,:,:,jpnh4) + trn(:,:,:,jpno2)   &
                &          +   trn(:,:,:,jpnph) + trn(:,:,:,jpndi) + trn(:,:,:,jpnpi)   & 
@@ -461,7 +462,7 @@ CONTAINS
                &          +   trn(:,:,:,jpphy) + trn(:,:,:,jpdia)                      &
                &          +   trn(:,:,:,jppoc) + trn(:,:,:,jpgoc)  + trn(:,:,:,jpdoc)  &        
                &          +   trn(:,:,:,jpzoo) + trn(:,:,:,jpmes)                      &
-               &          +   trn(:,:,:,jpaoa) + trn(:,:,:,jpnob) 
+               &          +   trn(:,:,:,jpaoa) + trn(:,:,:,jpnob) + trn(:,:,:,jpaox) 
         ELSE
             zwork(:,:,:) =    trn(:,:,:,jppo4) + trn(:,:,:,jppph)                      &
                &          +   trn(:,:,:,jppdi) + trn(:,:,:,jpppi)                      & 

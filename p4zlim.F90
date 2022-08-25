@@ -43,6 +43,8 @@ MODULE p4zlim
    REAL(wp), PUBLIC ::  qnfelim     !:  optimal Fe quota for nanophyto
    REAL(wp), PUBLIC ::  qdfelim     !:  optimal Fe quota for diatoms
    REAL(wp), PUBLIC ::  caco3r      !:  mean rainratio 
+   REAL(wp), PUBLIC ::  aoa_k_nh4   !:  half saturation constant for AOA NH4 uptake 
+   REAL(wp), PUBLIC ::  nob_k_no2   !:  half saturation constant for NOB NO2 uptake 
 
    !!* Phytoplankton limitation terms
    REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:)  ::   xnanono3   !: ???
@@ -60,6 +62,8 @@ MODULE p4zlim
    REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:)  ::   xlimbacl   !: ??
    REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:)  ::   concdfe    !: ???
    REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:)  ::   concnfe    !: ???
+   REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:)  ::   xaoanh4   !: ???
+   REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:)  ::   xnobno2   !: ???
 
    ! Coefficient for iron limitation
    REAL(wp) ::  xcoef1   = 0.0016  / 55.85  
@@ -180,6 +184,12 @@ CONTAINS
                xlimdfe (ji,jj,jk) = MIN( 1., zlim4 )
                xlimdia (ji,jj,jk) = MIN( zlim1, zlim2, zlim3, zlim4 )
                xlimsi  (ji,jj,jk) = MIN( zlim1, zlim2, zlim4 )
+               !
+               !   Limitation terms for nitrifiers
+               !   ----------------------------------------------
+               xaoanh4(ji,jj,jk) = ( trb(ji,jj,jk,jpnh4) / ( trb(ji,jj,jk,jpnh4) + aoa_k_nh4 + rtrn ) )
+               xnobno2(ji,jj,jk) = ( trb(ji,jj,jk,jpno2) / ( trb(ji,jj,jk,jpno2) + nob_k_no2 + rtrn ) )
+               !
            END DO
          END DO
       END DO
@@ -257,7 +267,8 @@ CONTAINS
       !
       NAMELIST/namp4zlim/ concnno3, concdno3, concnnh4, concdnh4, concnfer, concdfer, concbfe,   &
          &                concbno3, concbnh4, xsizedia, xsizephy, xsizern, xsizerd,          & 
-         &                xksi1, xksi2, xkdoc, qnfelim, qdfelim, caco3r, oxymin
+         &                xksi1, xksi2, xkdoc, qnfelim, qdfelim, caco3r, oxymin,             &
+         &                aoa_k_nh4, nob_k_no2
       !!----------------------------------------------------------------------
       !
       IF(lwp) THEN
@@ -296,6 +307,8 @@ CONTAINS
          WRITE(numout,*) '      halk saturation constant for anoxia       oxymin   =' , oxymin
          WRITE(numout,*) '      optimal Fe quota for nano.               qnfelim   = ', qnfelim
          WRITE(numout,*) '      Optimal Fe quota for diatoms             qdfelim   = ', qdfelim
+         WRITE(numout,*) '      NH4 half saturation for AOA              aoa_k_nh4 = ', aoa_k_nh4
+         WRITE(numout,*) '      NO2 half saturation for NOB              nob_k_no2 = ', nob_k_no2
       ENDIF
       !
       nitrfac (:,:,:) = 0._wp
@@ -314,6 +327,7 @@ CONTAINS
       ALLOCATE( xnanono3(jpi,jpj,jpk), xdiatno3(jpi,jpj,jpk),       &
          &      xnanonh4(jpi,jpj,jpk), xdiatnh4(jpi,jpj,jpk),       &
          &      xnanopo4(jpi,jpj,jpk), xdiatpo4(jpi,jpj,jpk),       &
+         &      xaoanh4(jpi,jpj,jpk),  xnobno2(jpi,jpj,jpk),        &
          &      xlimphy (jpi,jpj,jpk), xlimdia (jpi,jpj,jpk),       &
          &      xlimnfe (jpi,jpj,jpk), xlimdfe (jpi,jpj,jpk),       &
          &      xlimbac (jpi,jpj,jpk), xlimbacl(jpi,jpj,jpk),       &

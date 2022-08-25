@@ -57,7 +57,8 @@ MODULE par_pisces
    INTEGER, PUBLIC ::   jpgop     !: Big phosphorus particles Concentration
    INTEGER, PUBLIC ::   jplgw     !: Weak Ligands
    INTEGER, PUBLIC ::   jpaoa     !: ammonia oxidising archaea concentration 
-   INTEGER, PUBLIC ::   jpnob     !: nitrite oxidising archaea concentration 
+   INTEGER, PUBLIC ::   jpnob     !: nitrite oxidising bacteria concentration 
+   INTEGER, PUBLIC ::   jpaox     !: anammox bacteria concentration 
 
    !!---------------------------------------------------------------------
    !!   Default                                   No CFC geochemical model

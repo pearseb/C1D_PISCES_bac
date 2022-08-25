@@ -170,6 +170,7 @@ CONTAINS
         IF( cltra == 'LGW'      )   jplgw = jn      !: Weak ligands
         IF( cltra == 'AOA'      )   jpaoa = jn      !: Ammonia oxidising archaea C concentration
         IF( cltra == 'NOB'      )   jpnob = jn      !: Nitrite oxidising bacteria C concentration
+        IF( cltra == 'AOX'      )   jpaox = jn      !: Anammox bacteria C concentration
       END DO
 
       CALL p4z_sms_init       !  Maint routine
@@ -218,6 +219,7 @@ CONTAINS
          trn(:,:,:,jpnh4) = bioma0
          trn(:,:,:,jpaoa) = bioma0
          trn(:,:,:,jpnob) = bioma0
+         trn(:,:,:,jpaox) = bioma0
          IF( ln_ligand) THEN
             trn(:,:,:,jplgw) = 0.6E-9
          ENDIF
