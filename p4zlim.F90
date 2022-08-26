@@ -47,6 +47,10 @@ MODULE p4zlim
    REAL(wp), PUBLIC ::  nob_k_no2   !:  half saturation constant for NOB NO2 uptake 
    REAL(wp), PUBLIC ::  aox_k_nh4   !:  half saturation constant for AOX NH4 uptake 
    REAL(wp), PUBLIC ::  aox_k_no2   !:  half saturation constant for AOX NO2 uptake 
+   REAL(wp), PUBLIC ::  nar_k_doc   !:  half saturation constant for NAR DOC uptake 
+   REAL(wp), PUBLIC ::  nir_k_doc   !:  half saturation constant for NIR DOC uptake 
+   REAL(wp), PUBLIC ::  nar_k_no3   !:  half saturation constant for NAR NO3 uptake 
+   REAL(wp), PUBLIC ::  nir_k_no2   !:  half saturation constant for NIR NO2 uptake 
 
    !!* Phytoplankton limitation terms
    REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:)  ::   xnanono3   !: ???
@@ -68,6 +72,10 @@ MODULE p4zlim
    REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:)  ::   xnobno2   !: ???
    REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:)  ::   xaoxnh4   !: ???
    REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:)  ::   xaoxno2   !: ???
+   REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:)  ::   xnardoc   !: ???
+   REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:)  ::   xnirdoc   !: ???
+   REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:)  ::   xnarno3   !: ???
+   REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:)  ::   xnirno2   !: ???
 
    ! Coefficient for iron limitation
    REAL(wp) ::  xcoef1   = 0.0016  / 55.85  
@@ -196,6 +204,13 @@ CONTAINS
                xaoxnh4(ji,jj,jk) = ( trb(ji,jj,jk,jpnh4) / ( trb(ji,jj,jk,jpnh4) + aox_k_nh4 + rtrn ) )
                xaoxno2(ji,jj,jk) = ( trb(ji,jj,jk,jpno2) / ( trb(ji,jj,jk,jpno2) + aox_k_no2 + rtrn ) )
                !
+               !   Limitation terms for heterotrophs
+               !   ----------------------------------------------
+               xnardoc(ji,jj,jk) = ( trb(ji,jj,jk,jpdoc) / ( trb(ji,jj,jk,jpdoc) + nar_k_doc + rtrn ) )
+               xnirdoc(ji,jj,jk) = ( trb(ji,jj,jk,jpdoc) / ( trb(ji,jj,jk,jpdoc) + nir_k_doc + rtrn ) )
+               xnarno3(ji,jj,jk) = ( trb(ji,jj,jk,jpno3) / ( trb(ji,jj,jk,jpno3) + nar_k_no3 + rtrn ) )
+               xnirno2(ji,jj,jk) = ( trb(ji,jj,jk,jpno2) / ( trb(ji,jj,jk,jpno2) + nir_k_no2 + rtrn ) )
+               !
            END DO
          END DO
       END DO
@@ -274,7 +289,8 @@ CONTAINS
       NAMELIST/namp4zlim/ concnno3, concdno3, concnnh4, concdnh4, concnfer, concdfer, concbfe,   &
          &                concbno3, concbnh4, xsizedia, xsizephy, xsizern, xsizerd,          & 
          &                xksi1, xksi2, xkdoc, qnfelim, qdfelim, caco3r, oxymin,             &
-         &                aoa_k_nh4, nob_k_no2, aox_k_nh4, aox_k_no2
+         &                aoa_k_nh4, nob_k_no2, aox_k_nh4, aox_k_no2,                        & 
+         &                nar_k_doc, nir_k_doc, nar_k_no3, nir_k_no2
       !!----------------------------------------------------------------------
       !
       IF(lwp) THEN
@@ -317,6 +333,10 @@ CONTAINS
          WRITE(numout,*) '      NO2 half saturation for NOB              nob_k_no2 = ', nob_k_no2
          WRITE(numout,*) '      NH4 half saturation for AOX              aox_k_nh4 = ', aox_k_nh4
          WRITE(numout,*) '      NO2 half saturation for AOX              aox_k_no2 = ', aox_k_no2
+         WRITE(numout,*) '      DOC half saturation for NAR              nar_k_doc = ', nar_k_doc
+         WRITE(numout,*) '      DOC half saturation for NIR              nir_k_doc = ', nir_k_doc
+         WRITE(numout,*) '      NO3 half saturation for NAR              nar_k_no3 = ', nar_k_no3
+         WRITE(numout,*) '      NO2 half saturation for NIR              nir_k_no2 = ', nir_k_no2
       ENDIF
       !
       nitrfac (:,:,:) = 0._wp
@@ -337,6 +357,8 @@ CONTAINS
          &      xnanopo4(jpi,jpj,jpk), xdiatpo4(jpi,jpj,jpk),       &
          &      xaoanh4(jpi,jpj,jpk),  xnobno2(jpi,jpj,jpk),        &
          &      xaoxnh4(jpi,jpj,jpk),  xaoxno2(jpi,jpj,jpk),        &
+         &      xnardoc(jpi,jpj,jpk),  xnirdoc(jpi,jpj,jpk),        &
+         &      xnarno3(jpi,jpj,jpk),  xnirno2(jpi,jpj,jpk),        &
          &      xlimphy (jpi,jpj,jpk), xlimdia (jpi,jpj,jpk),       &
          &      xlimnfe (jpi,jpj,jpk), xlimdfe (jpi,jpj,jpk),       &
          &      xlimbac (jpi,jpj,jpk), xlimbacl(jpi,jpj,jpk),       &

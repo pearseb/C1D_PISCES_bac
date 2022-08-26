@@ -38,6 +38,22 @@ MODULE p4zrem
    REAL(wp), PUBLIC ::   xsilab     !: fraction of labile biogenic silica 
    REAL(wp), PUBLIC ::   feratb     !: Fe/C quota in bacteria
    REAL(wp), PUBLIC ::   xkferb     !: Half-saturation constant for bacteria Fe/C
+   REAL(wp), PUBLIC ::   nar_pocoef !: Rate of oxygen uptake by NAR via diffusion 
+   REAL(wp), PUBLIC ::   nar_mumax  !: Maximum growth rate of NAR 
+   REAL(wp), PUBLIC ::   nar_yo_doc !: Yield for NAR aerobic growth on DOC
+   REAL(wp), PUBLIC ::   nar_yo_oxy !: Yield for NAR aerobic growth on O2
+   REAL(wp), PUBLIC ::   nar_po_nh4 !: Production of NH4 by NAR during aerobic growth on O2
+   REAL(wp), PUBLIC ::   nar_yn_doc !: Yield for NAR anaerobic growth on DOC
+   REAL(wp), PUBLIC ::   nar_yn_no3 !: Yield for NAR anaerobic growth on NO3
+   REAL(wp), PUBLIC ::   nar_pn_nh4 !: Production of NH4 by NAR during anaerobic growth on NO3
+   REAL(wp), PUBLIC ::   nir_pocoef !: Rate of oxygen uptake by NIR via diffusion 
+   REAL(wp), PUBLIC ::   nir_mumax  !: Maximum growth rate of NIR 
+   REAL(wp), PUBLIC ::   nir_yo_doc !: Yield for NIR aerobic growth on DOC
+   REAL(wp), PUBLIC ::   nir_yo_oxy !: Yield for NIR aerobic growth on O2
+   REAL(wp), PUBLIC ::   nir_po_nh4 !: Production of NH4 by NIR during aerobic growth on O2
+   REAL(wp), PUBLIC ::   nir_yn_doc !: Yield for NIR anaerobic growth on DOC
+   REAL(wp), PUBLIC ::   nir_yn_no2 !: Yield for NIR anaerobic growth on NO2
+   REAL(wp), PUBLIC ::   nir_pn_nh4 !: Production of NH4 by NIR during anaerobic growth on NO3
    REAL(wp), PUBLIC ::   aoa_pocoef !: Rate of oxygen uptake by AOA via diffusion 
    REAL(wp), PUBLIC ::   aoa_mumax  !: Maximum growth rate of AOA
    REAL(wp), PUBLIC ::   aoa_y_nh4  !: Yield for AOA growth on NH4
@@ -53,6 +69,8 @@ MODULE p4zrem
    REAL(wp), PUBLIC ::   aox_y_no2  !: Yield for AOX growth on NO2
    REAL(wp), PUBLIC ::   aox_p_no3  !: Yield for AOX growth on NO3
 
+   REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   zonitrnar    !: Nitrate reducing facultative heterotroph growth array
+   REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   zonitrnir    !: Nitrite reducing facultative heterotroph growth array
    REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   zonitraoa    !: ammonia oxidiser growth array
    REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   zonitrnob    !: ammonia oxidiser growth array
    REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   zonitraox    !: anammox growth array
@@ -155,20 +173,20 @@ CONTAINS
                   denitrno3(ji,jj,jk)  = MIN((trb(ji,jj,jk,jpno3)-rtrn) / rdenit, denitrno3(ji,jj,jk)) ! only remove available NO3
                   denitrno2(ji,jj,jk)  = MIN((trb(ji,jj,jk,jpno2)-rtrn) / rdenit, denitrno2(ji,jj,jk)) ! only remove available NO2
 
-                  ! anaerobic remineralisation without NO3, NO2 or O2
-                  ! -------------------------------------------------------
-                  zaltrem(ji,jj,jk) = zammonic - denitr(ji,jj,jk)
-
                   ! make sure all arrays are positive
                   ! -------------------------------------------------------
                   zolimi(ji,jj,jk) = MAX( 0.e0, zolimi(ji,jj,jk) )
                   denitrno3(ji,jj,jk) = MAX( 0.e0, denitrno3(ji,jj,jk) )
                   denitrno2(ji,jj,jk) = MAX( 0.e0, denitrno2(ji,jj,jk) )
-                  zaltrem(ji,jj,jk) = MAX( 0.e0, zaltrem(ji,jj,jk) )
 
                   ! update the full denitrification array
                   ! -------------------------------------------------------
                   denitr(ji,jj,jk) = denitrno3(ji,jj,jk) + denitrno2(ji,jj,jk)
+
+                  ! anaerobic remineralisation without NO3, NO2 or O2
+                  ! -------------------------------------------------------
+                  zaltrem(ji,jj,jk) = zammonic - denitr(ji,jj,jk)
+                  zaltrem(ji,jj,jk) = MAX( 0.e0, zaltrem(ji,jj,jk) )
 
                   ! Update the tracer arrays
                   tra(ji,jj,jk,jppo4) = tra(ji,jj,jk,jppo4) + zolimi(ji,jj,jk) + denitr(ji,jj,jk) + zaltrem(ji,jj,jk)
@@ -449,10 +467,13 @@ CONTAINS
       !!
       !!----------------------------------------------------------------------
       NAMELIST/nampisrem/ xremik, nitrif, xsirem, xsiremlab, xsilab, feratb, xkferb, & 
-         &                xremikc, xremikn, xremikp, aoa_pocoef, aoa_mumax,          &
-         &                aoa_y_nh4, aoa_y_oxy, aoa_CN, nob_pocoef, nob_mumax,       &
-         &                nob_y_no2, nob_y_oxy, nob_CN, aox_mumax, aox_y_nh4,        &
-         &                aox_y_no2, aox_p_no3
+         &                xremikc, xremikn, xremikp,                                 &
+         &                nar_pocoef, nar_mumax, nar_yo_doc, nar_yo_oxy, nar_po_nh4, &             
+         &                nar_yn_doc, nar_yn_no3, nar_pn_nh4, nir_pocoef, nir_mumax, &
+         &                nir_yo_doc, nir_yo_oxy, nir_po_nh4, nir_yn_doc, nir_yn_no2,&
+         &                nir_pn_nh4, aoa_pocoef, aoa_mumax, aoa_y_nh4, aoa_y_oxy,   &
+         &                aoa_CN, nob_pocoef, nob_mumax, nob_y_no2, nob_y_oxy,       &
+         &                nob_CN, aox_mumax, aox_y_nh4, aox_y_no2, aox_p_no3
       INTEGER :: ios                 ! Local integer output status for namelist read
       !!----------------------------------------------------------------------
       !
@@ -485,6 +506,22 @@ CONTAINS
          WRITE(numout,*) '      NH4 nitrification rate                    nitrif    =', nitrif
          WRITE(numout,*) '      Bacterial Fe/C ratio                      feratb    =', feratb
          WRITE(numout,*) '      Half-saturation constant for bact. Fe/C   xkferb    =', xkferb
+         WRITE(numout,*) '      NAR diffusive uptake limit (m3/mmolC/day) nar_pocoef =', nar_pocoef
+         WRITE(numout,*) '      NAR maximum growth rate (/day)            nar_mumax =', nar_mumax
+         WRITE(numout,*) '      NAR biomass yield on DOC (aerobic)        nar_yo_doc =', nar_yo_doc
+         WRITE(numout,*) '      NAR biomass yield on O2 (aerobic)         nar_yo_oxy =', nar_yo_oxy
+         WRITE(numout,*) '      NAR production of NH4 (aerobic)           nar_po_nh4 =', nar_po_nh4
+         WRITE(numout,*) '      NAR biomass yield on DOC (anaerobic)      nar_yn_doc =', nar_yn_doc
+         WRITE(numout,*) '      NAR biomass yield on NO3 (anaerobic)      nar_yn_no3 =', nar_yn_no3
+         WRITE(numout,*) '      NAR production of NH4 (anaerobic)         nar_pn_nh4 =', nar_pn_nh4
+         WRITE(numout,*) '      NIR diffusive uptake limit (m3/mmolC/day) nir_pocoef =', nir_pocoef
+         WRITE(numout,*) '      NIR maximum growth rate (/day)            nir_mumax =', nir_mumax
+         WRITE(numout,*) '      NIR biomass yield on DOC (aerobic)        nir_yo_doc =', nir_yo_doc
+         WRITE(numout,*) '      NIR biomass yield on O2 (aerobic)         nir_yo_oxy =', nir_yo_oxy
+         WRITE(numout,*) '      NIR production of NH4 (aerobic)           nir_po_nh4 =', nir_po_nh4
+         WRITE(numout,*) '      NIR biomass yield on DOC (anaerobic)      nir_yn_doc =', nir_yn_doc
+         WRITE(numout,*) '      NIR biomass yield on NO2 (anaerobic)      nir_yn_no2 =', nir_yn_no2
+         WRITE(numout,*) '      NIR production of NH4 (anaerobic)         nir_pn_nh4 =', nir_pn_nh4
          WRITE(numout,*) '      AOA diffusive uptake limit (m3/mmolC/day) aoa_pocoef =', aoa_pocoef
          WRITE(numout,*) '      AOA maximum growth rate (/day)            aoa_mumax =', aoa_mumax
          WRITE(numout,*) '      AOA biomass yield on NH4 (mol C / mol NH4) aoa_y_nh4 =', aoa_y_nh4
@@ -501,6 +538,8 @@ CONTAINS
          WRITE(numout,*) '      AOX NO3 produced per Bio (mol NO3 / mol C) aox_p_no3 =', aox_p_no3
       ENDIF
       !
+      zonitrnar(:,:,:) = 0._wp
+      zonitrnir(:,:,:) = 0._wp
       zonitraoa(:,:,:) = 0._wp
       zonitrnob(:,:,:) = 0._wp
       zonitraox(:,:,:) = 0._wp
@@ -516,9 +555,10 @@ CONTAINS
       !!----------------------------------------------------------------------
       !!                     ***  ROUTINE p4z_rem_alloc  ***
       !!----------------------------------------------------------------------
-      ALLOCATE( zonitraoa(jpi,jpj,jpk), zonitrnob(jpi,jpj,jpk), zonitraox(jpi,jpj,jpk), &
-      &         denitr(jpi,jpj,jpk), denitrno3(jpi,jpj,jpk), denitrno2(jpi,jpj,jpk),    &
-      &         zaltrem(jpi,jpj,jpk), STAT=p4z_rem_alloc )
+      ALLOCATE( zonitrnar(jpi,jpj,jpk), zonitrnir(jpi,jpj,jpk), zonitraoa(jpi,jpj,jpk), &
+      &         zonitrnob(jpi,jpj,jpk), zonitraox(jpi,jpj,jpk), denitr(jpi,jpj,jpk),    & 
+      &         denitrno3(jpi,jpj,jpk), denitrno2(jpi,jpj,jpk), zaltrem(jpi,jpj,jpk),   & 
+      &         STAT=p4z_rem_alloc )
       !
       IF( p4z_rem_alloc /= 0 )   CALL ctl_stop( 'STOP', 'p4z_rem_alloc: failed to allocate arrays' )
       !
