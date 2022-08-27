@@ -262,7 +262,7 @@ CONTAINS
                tra(ji,jj,jk,jpaox) = tra(ji,jj,jk,jpaox) - zmortaox
                tra(ji,jj,jk,jpnar) = tra(ji,jj,jk,jpnar) - zmortnar
                tra(ji,jj,jk,jpnir) = tra(ji,jj,jk,jpnir) - zmortnir
-               tra(ji,jj,jk,jppoc) = tra(ji,jj,jk,jppoc) + zmortaoa + zmortnob + zmortaox   &
+               tra(ji,jj,jk,jpdoc) = tra(ji,jj,jk,jpdoc) + zmortaoa + zmortnob + zmortaox   &
                &                     + zmortnar + zmortnir
 
             END DO
