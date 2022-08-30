@@ -70,6 +70,9 @@ MODULE p4zrem
    REAL(wp), PUBLIC ::   aox_y_nh4  !: Yield for AOX growth on NH4
    REAL(wp), PUBLIC ::   aox_y_no2  !: Yield for AOX growth on NO2
    REAL(wp), PUBLIC ::   aox_p_no3  !: Yield for AOX growth on NO3
+   REAL(wp), PUBLIC ::   oxysup     !: Oxygen supply from lateral physics
+   REAL(wp), PUBLIC ::   docsup     !: DOC supply from lateral physics
+   INTEGER, PUBLIC ::   oxyint     !: Oxygen supply interval (# timesteps)
 
    REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   zobiomnar    !: Nitrate reducing facultative heterotroph growth array
    REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:) ::   zobiomnir    !: Nitrite reducing facultative heterotroph growth array
@@ -111,7 +114,7 @@ CONTAINS
       REAL(wp), DIMENSION(jpi,jpj    ) :: ztempbac
       REAL(wp), DIMENSION(jpi,jpj,jpk) :: zdepbac, zolimi, zdepprod, zfacsi, zfacsib, zdepeff, zfebact
       REAL(wp), DIMENSION(jpi,jpj,jpk) :: mu_nar, mu_nir, mu_aoa, mu_nob, mu_aox
-      REAL(wp), DIMENSION(jpi,jpj,jpk) :: nar_aer, nir_aer
+      REAL(wp), DIMENSION(jpi,jpj,jpk) :: nar_aer, nir_aer, aoa_aer, nob_aer
       REAL(wp), ALLOCATABLE, DIMENSION(:,:,:) :: zw3d
       !!---------------------------------------------------------------------
       !
@@ -132,6 +135,8 @@ CONTAINS
       nar_aer(:,:,:)  = 1._wp
       nir_aer(:,:,:)  = 1._wp
       zaltrem(:,:,:)  = 0._wp
+      aoa_aer(:,:,:)  = 0._wp
+      nob_aer(:,:,:)  = 0._wp
 
       ! Computation of the mean phytoplankton concentration as
       ! a crude estimate of the bacterial biomass
@@ -288,7 +293,7 @@ CONTAINS
                   &                     + zobiomnar(ji,jj,jk)*(rno3/nar_yn_doc - 1.0/nar_CN)*(1.0 - nar_aer(ji,jj,jk))  &
                   &                     + zobiomnir(ji,jj,jk)*(rno3/nir_yo_doc - 1.0/nir_CN)*nir_aer(ji,jj,jk)          &
                   &                     + zobiomnir(ji,jj,jk)*(rno3/nir_yn_doc - 1.0/nir_CN)*(1.0 - nir_aer(ji,jj,jk)) )
-                  tra(ji,jj,jk,jpno2) = tra(ji,jj,jk,jpno2) + 1/rno3 * (1.0 - zaltrem(ji,jj,jk)) *                      &
+                  tra(ji,jj,jk,jpno2) = tra(ji,jj,jk,jpno2) + 1.0/rno3 * (1.0 - zaltrem(ji,jj,jk)) *                    &
                   &                     ( zobiomnar(ji,jj,jk)/nar_yn_no3*(1.0 - nar_aer(ji,jj,jk))                      &
                   &                     - zobiomnir(ji,jj,jk)/nir_yn_no2*(1.0 - nar_aer(ji,jj,jk)) )
                   tra(ji,jj,jk,jpno3) = tra(ji,jj,jk,jpno3) - 1.0/rno3 * (1.0 - zaltrem(ji,jj,jk)) *                    &
@@ -302,6 +307,11 @@ CONTAINS
                   &                     + zobiomnir(ji,jj,jk)*(rno3/nir_yo_doc - 1.0/nir_CN)*nir_aer(ji,jj,jk)          &
                   &                     + zobiomnir(ji,jj,jk)*(rno3/nir_yn_doc - 1.0/nir_CN)*(1.0 - nir_aer(ji,jj,jk))  &
                   &                     + zobiomnir(ji,jj,jk)/nir_yn_no2*(1.0 - nar_aer(ji,jj,jk)) 
+                  ! Add lateral supply of O2 and NH4
+                  IF ( modulo(kt, oxyint) == 0.0 ) THEN
+                     tra(ji,jj,jk,jpoxy) = tra(ji,jj,jk,jpoxy) + oxysup * xstep * 1e-6
+                  ENDIF
+                  tra(ji,jj,jk,jpdoc) = tra(ji,jj,jk,jpdoc) + docsup / rno3 * xstep * 1e-6
                END DO
             END DO
          END DO
@@ -375,10 +385,11 @@ CONTAINS
                !~~~~~~~~~~~~~~~~~~~~~~~!
                  ! Get uptake rates of oxygen and ammonium
                zuptoxy = aoa_pocoef * trb(ji,jj,jk,jpoxy)*1e6  ! mmol O2 / mmol C / day
-               !print*, trb(ji,jj,jk,jpoxy)*1e6, trb(ji,jj,jk,jpnh4), xaoanh4(ji,jj,jk)
                zuptnh4 = ( aoa_mumax / aoa_y_nh4 ) * xaoanh4(ji,jj,jk)  ! mmol NH4 / mmol C / day
                  ! Calculate growth rate (Liebig Law of min)
                mu_aoa(ji,jj,jk) = MAX(0.0, MIN( zuptoxy * aoa_y_oxy, zuptnh4 * aoa_y_nh4 ))  ! /day
+                 ! Determine whether growth is better on oxygen or ammonium (look for max)
+               IF ( zuptnh4*aoa_y_nh4 > zuptoxy*aoa_y_oxy ) aoa_aer(ji,jj,jk) = 1.0
                  ! Calculate ammonia oxidiser biomass accumulation rate
                zobiomaoa(ji,jj,jk) = mu_aoa(ji,jj,jk) * xstep * trb(ji,jj,jk,jpaoa)  ! mmol C / ts
                
@@ -390,6 +401,8 @@ CONTAINS
                zuptno2 = ( nob_mumax / nob_y_no2 ) * xnobno2(ji,jj,jk)  ! mmol NO2 / mmol C / day
                  ! Calculate growth rate (Liebig Law of min)
                mu_nob(ji,jj,jk) = MAX(0.0, MIN( zuptoxy * nob_y_oxy, zuptno2 * nob_y_no2 ))  ! /day
+                 ! Determine whether growth is better on oxygen or nitrite (look for max)
+               IF ( zuptno2*nob_y_no2 > zuptoxy*nob_y_oxy ) nob_aer(ji,jj,jk) = 1.0
                  ! Calculate nitrite oxidiser biomass accumulation rate
                zobiomnob(ji,jj,jk)  = mu_nob(ji,jj,jk) * xstep * trb(ji,jj,jk,jpnob)  ! mmol C / ts
 
@@ -577,6 +590,14 @@ CONTAINS
                zw3d(:,:,:) = nir_aer(:,:,:) * tmask(:,:,:)  ! NIR growth aerobic?
                CALL iom_put( "aerNIR", zw3d )
           ENDIF
+          IF( iom_use( "aerAOA" ) )  THEN
+               zw3d(:,:,:) = aoa_aer(:,:,:) * tmask(:,:,:)  ! AOA growth limited by O2?
+               CALL iom_put( "aerAOA", zw3d )
+          ENDIF
+          IF( iom_use( "aerNOB" ) )  THEN
+               zw3d(:,:,:) = nob_aer(:,:,:) * tmask(:,:,:)  ! NOB growth limited by O2?
+               CALL iom_put( "aerNOB", zw3d )
+          ENDIF
           !
           DEALLOCATE( zw3d )
        ENDIF
@@ -605,7 +626,7 @@ CONTAINS
          &                nir_yo_doc, nir_yo_oxy, nir_po_nh4, nir_yn_doc, nir_yn_no2,&
          &                nir_pn_nh4, nir_CN, aoa_pocoef, aoa_mumax, aoa_y_nh4, aoa_y_oxy,   &
          &                aoa_CN, nob_pocoef, nob_mumax, nob_y_no2, nob_y_oxy,       &
-         &                nob_CN, aox_mumax, aox_y_nh4, aox_y_no2, aox_p_no3
+         &                nob_CN, aox_mumax, aox_y_nh4, aox_y_no2, aox_p_no3, oxysup, docsup, oxyint
       INTEGER :: ios                 ! Local integer output status for namelist read
       !!----------------------------------------------------------------------
       !
@@ -670,6 +691,9 @@ CONTAINS
          WRITE(numout,*) '      AOX biomass yield on NH4 (mol C / mol NH4) aox_y_nh4 =', aox_y_nh4
          WRITE(numout,*) '      AOX biomass yield on NO2 (mol C / mol NO2) aox_y_no2 =', aox_y_no2
          WRITE(numout,*) '      AOX NO3 produced per Bio (mol NO3 / mol C) aox_p_no3 =', aox_p_no3
+         WRITE(numout,*) '      Oxygen supply from lateral processes       oxysup    =', oxysup
+         WRITE(numout,*) '      DOC supply from lateral processes          docsup    =', docsup
+         WRITE(numout,*) '      Oxygen supply interval (# of timesteps)    oxyint    =', oxyint
       ENDIF
       !
       zobiomnar(:,:,:) = 0._wp

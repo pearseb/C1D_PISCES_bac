@@ -199,17 +199,17 @@ CONTAINS
                !
                !   Limitation terms for chemoautotrophs
                !   ----------------------------------------------
-               xaoanh4(ji,jj,jk) = ( trb(ji,jj,jk,jpnh4) / ( trb(ji,jj,jk,jpnh4) + aoa_k_nh4 + rtrn ) )
-               xnobno2(ji,jj,jk) = ( trb(ji,jj,jk,jpno2) / ( trb(ji,jj,jk,jpno2) + nob_k_no2 + rtrn ) )
-               xaoxnh4(ji,jj,jk) = ( trb(ji,jj,jk,jpnh4) / ( trb(ji,jj,jk,jpnh4) + aox_k_nh4 + rtrn ) )
-               xaoxno2(ji,jj,jk) = ( trb(ji,jj,jk,jpno2) / ( trb(ji,jj,jk,jpno2) + aox_k_no2 + rtrn ) )
+               xaoanh4(ji,jj,jk) = ( trb(ji,jj,jk,jpnh4) / ( trb(ji,jj,jk,jpnh4) + aoa_k_nh4/rno3 + rtrn ) )
+               xnobno2(ji,jj,jk) = ( trb(ji,jj,jk,jpno2) / ( trb(ji,jj,jk,jpno2) + nob_k_no2/rno3 + rtrn ) )
+               xaoxnh4(ji,jj,jk) = ( trb(ji,jj,jk,jpnh4) / ( trb(ji,jj,jk,jpnh4) + aox_k_nh4/rno3 + rtrn ) )
+               xaoxno2(ji,jj,jk) = ( trb(ji,jj,jk,jpno2) / ( trb(ji,jj,jk,jpno2) + aox_k_no2/rno3 + rtrn ) )
                !
                !   Limitation terms for heterotrophs
                !   ----------------------------------------------
                xnardoc(ji,jj,jk) = ( trb(ji,jj,jk,jpdoc) / ( trb(ji,jj,jk,jpdoc) + nar_k_doc + rtrn ) )
                xnirdoc(ji,jj,jk) = ( trb(ji,jj,jk,jpdoc) / ( trb(ji,jj,jk,jpdoc) + nir_k_doc + rtrn ) )
-               xnarno3(ji,jj,jk) = ( trb(ji,jj,jk,jpno3) / ( trb(ji,jj,jk,jpno3) + nar_k_no3 + rtrn ) )
-               xnirno2(ji,jj,jk) = ( trb(ji,jj,jk,jpno2) / ( trb(ji,jj,jk,jpno2) + nir_k_no2 + rtrn ) )
+               xnarno3(ji,jj,jk) = ( trb(ji,jj,jk,jpno3) / ( trb(ji,jj,jk,jpno3) + nar_k_no3/rno3 + rtrn ) )
+               xnirno2(ji,jj,jk) = ( trb(ji,jj,jk,jpno2) / ( trb(ji,jj,jk,jpno2) + nir_k_no2/rno3 + rtrn ) )
                !
            END DO
          END DO

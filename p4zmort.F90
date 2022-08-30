@@ -27,8 +27,16 @@ MODULE p4zmort
    REAL(wp), PUBLIC ::   wchldm   !:
    REAL(wp), PUBLIC ::   mprat    !:
    REAL(wp), PUBLIC ::   mprat2   !:
-   REAL(wp), PUBLIC ::   bmort   !:
-   REAL(wp), PUBLIC ::   bresp   !:
+   REAL(wp), PUBLIC ::   bmortnar   !:
+   REAL(wp), PUBLIC ::   bmortnir   !:
+   REAL(wp), PUBLIC ::   bmortaoa   !:
+   REAL(wp), PUBLIC ::   bmortnob   !:
+   REAL(wp), PUBLIC ::   bmortaox   !:
+   REAL(wp), PUBLIC ::   brespnar   !:
+   REAL(wp), PUBLIC ::   brespnir   !:
+   REAL(wp), PUBLIC ::   brespaoa   !:
+   REAL(wp), PUBLIC ::   brespnob   !:
+   REAL(wp), PUBLIC ::   brespaox   !:
 
    !!----------------------------------------------------------------------
    !! NEMO/TOP 4.0 , NEMO Consortium (2018)
@@ -236,18 +244,18 @@ CONTAINS
                zcompnir = MAX( ( trb(ji,jj,jk,jpnir) - 1e-8 ), 0.e0 )
 
                !  Squared mortality
-               zmoraoa = bmort * 1.e6 * xstep * xdiss(ji,jj,jk) * zcompaoa * trb(ji,jj,jk,jpaoa) 
-               zmornob = bmort * 1.e6 * xstep * xdiss(ji,jj,jk) * zcompnob * trb(ji,jj,jk,jpnob) 
-               zmoraox = bmort * 1.e6 * xstep * xdiss(ji,jj,jk) * zcompaox * trb(ji,jj,jk,jpaox) 
-               zmornar = bmort * 1.e6 * xstep * xdiss(ji,jj,jk) * zcompnar * trb(ji,jj,jk,jpnar) 
-               zmornir = bmort * 1.e6 * xstep * xdiss(ji,jj,jk) * zcompnir * trb(ji,jj,jk,jpnir) 
+               zmoraoa = bmortaoa * 1.e6 * xstep * xdiss(ji,jj,jk) * zcompaoa * trb(ji,jj,jk,jpaoa) 
+               zmornob = bmortnob * 1.e6 * xstep * xdiss(ji,jj,jk) * zcompnob * trb(ji,jj,jk,jpnob) 
+               zmoraox = bmortaox * 1.e6 * xstep * xdiss(ji,jj,jk) * zcompaox * trb(ji,jj,jk,jpaox) 
+               zmornar = bmortnar * 1.e6 * xstep * xdiss(ji,jj,jk) * zcompnar * trb(ji,jj,jk,jpnar) 
+               zmornir = bmortnir * 1.e6 * xstep * xdiss(ji,jj,jk) * zcompnir * trb(ji,jj,jk,jpnir) 
 
                !  Linear respiration term
-               zresaoa = bresp * xstep * trb(ji,jj,jk,jpaoa) * zcompaoa / ( xkmort + trb(ji,jj,jk,jpaoa) )
-               zresnob = bresp * xstep * trb(ji,jj,jk,jpnob) * zcompnob / ( xkmort + trb(ji,jj,jk,jpnob) )
-               zresaox = bresp * xstep * trb(ji,jj,jk,jpaox) * zcompaox / ( xkmort + trb(ji,jj,jk,jpaox) )
-               zresnar = bresp * xstep * trb(ji,jj,jk,jpnar) * zcompnar / ( xkmort + trb(ji,jj,jk,jpnar) )
-               zresnir = bresp * xstep * trb(ji,jj,jk,jpnir) * zcompnir / ( xkmort + trb(ji,jj,jk,jpnir) )
+               zresaoa = brespaoa * xstep * trb(ji,jj,jk,jpaoa) * zcompaoa / ( xkmort + trb(ji,jj,jk,jpaoa) )
+               zresnob = brespnob * xstep * trb(ji,jj,jk,jpnob) * zcompnob / ( xkmort + trb(ji,jj,jk,jpnob) )
+               zresaox = brespaox * 0.4 * xstep * trb(ji,jj,jk,jpaox) * zcompaox / ( xkmort + trb(ji,jj,jk,jpaox) )
+               zresnar = brespnar * xstep * trb(ji,jj,jk,jpnar) * zcompnar / ( xkmort + trb(ji,jj,jk,jpnar) )
+               zresnir = brespnir * xstep * trb(ji,jj,jk,jpnir) * zcompnir / ( xkmort + trb(ji,jj,jk,jpnir) )
 
                !  Total loss
                zmortaoa = zmoraoa + zresaoa
@@ -262,8 +270,10 @@ CONTAINS
                tra(ji,jj,jk,jpaox) = tra(ji,jj,jk,jpaox) - zmortaox
                tra(ji,jj,jk,jpnar) = tra(ji,jj,jk,jpnar) - zmortnar
                tra(ji,jj,jk,jpnir) = tra(ji,jj,jk,jpnir) - zmortnir
-               tra(ji,jj,jk,jpdoc) = tra(ji,jj,jk,jpdoc) + zmortaoa + zmortnob + zmortaox   &
-               &                     + zmortnar + zmortnir
+               tra(ji,jj,jk,jpdoc) = tra(ji,jj,jk,jpdoc) + (zresaoa + zresnob + zresaox   &
+               &                     + zresnar + zresnir)
+               tra(ji,jj,jk,jppoc) = tra(ji,jj,jk,jppoc) + (zmoraoa + zmornob + zmoraox   &
+               &                     + zmornar + zmornir)
 
             END DO
          END DO
@@ -293,7 +303,9 @@ CONTAINS
       !!----------------------------------------------------------------------
       INTEGER ::   ios   ! Local integer
       !
-      NAMELIST/namp4zmort/ wchl, wchld, wchldm, mprat, mprat2, bmort, bresp
+      NAMELIST/namp4zmort/ wchl, wchld, wchldm, mprat, mprat2, bmortnar,     &
+      &                    bmortnir, bmortaoa, bmortnob, bmortaox, brespnar, &
+      &                    brespnir, brespaoa, brespnob, brespaox
       !!----------------------------------------------------------------------
       !
       IF(lwp) THEN
@@ -317,8 +329,16 @@ CONTAINS
          WRITE(numout,*) '      maximum quadratic mortality of diatoms      wchldm =', wchldm
          WRITE(numout,*) '      phytoplankton mortality rate                mprat  =', mprat
          WRITE(numout,*) '      Diatoms mortality rate                      mprat2 =', mprat2
-         WRITE(numout,*) '      Bacteria quadratic mortality rate           bmort =', bmort
-         WRITE(numout,*) '      Bacteria linear respiration rate            bresp =', bresp
+         WRITE(numout,*) '      NAR quadratic mortality rate                bmortnar =', bmortnar
+         WRITE(numout,*) '      NIR quadratic mortality rate                bmortnir =', bmortnir
+         WRITE(numout,*) '      AOA quadratic mortality rate                bmortaoa =', bmortaoa
+         WRITE(numout,*) '      NOB quadratic mortality rate                bmortnob =', bmortnob
+         WRITE(numout,*) '      AOX quadratic mortality rate                bmortaox =', bmortaox
+         WRITE(numout,*) '      NAR linear respiration rate                 brespnar =', brespnar
+         WRITE(numout,*) '      NIR linear respiration rate                 brespnir =', brespnir
+         WRITE(numout,*) '      AOA linear respiration rate                 brespaoa =', brespaoa
+         WRITE(numout,*) '      NOB linear respiration rate                 brespnob =', brespnob
+         WRITE(numout,*) '      AOX linear respiration rate                 brespaox =', brespaox
       ENDIF
       !
    END SUBROUTINE p4z_mort_init
