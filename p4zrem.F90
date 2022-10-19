@@ -109,18 +109,18 @@ CONTAINS
       REAL(wp) ::   zammonic, zoxyremc, zoxyremn, zoxyremp, znitrate2ton
       REAL(wp) ::   zosil, ztem, zdenitnh4, zolimic, zolimin, zolimip, zdenitrn, zdenitrp
       REAL(wp) ::   zuptdoc, zuptoxy, zuptnh4, zuptno2, zuptno3, znitr_prodno2
-      REAL(wp) ::   mu_nar_aer, mu_nar_ana, mu_nir_aer, mu_nir_ana 
       CHARACTER (len=25) :: charout
       REAL(wp), DIMENSION(jpi,jpj    ) :: ztempbac
       REAL(wp), DIMENSION(jpi,jpj,jpk) :: zdepbac, zolimi, zdepprod, zfacsi, zfacsib, zdepeff, zfebact
       REAL(wp), DIMENSION(jpi,jpj,jpk) :: mu_nar, mu_nir, mu_aoa, mu_nob, mu_aox
+      REAL(wp), DIMENSION(jpi,jpj,jpk) :: mu_nar_aer, mu_nar_ana, mu_nir_aer, mu_nir_ana
       REAL(wp), DIMENSION(jpi,jpj,jpk) :: nar_aer, nir_aer, aoa_aer, nob_aer
       REAL(wp), ALLOCATABLE, DIMENSION(:,:,:) :: zw3d
       !!---------------------------------------------------------------------
       !
       IF( ln_timing )   CALL timing_start('p4z_rem')
       !
-      ! altremlisation of arrys
+      ! initialisation of arrays
       zdepprod(:,:,:) = 1._wp
       zdepeff (:,:,:) = 0.3_wp
       ztempbac(:,:)   = 0._wp
@@ -132,6 +132,10 @@ CONTAINS
       mu_aoa(:,:,:)   = 0._wp
       mu_nob(:,:,:)   = 0._wp
       mu_aox(:,:,:)   = 0._wp
+      mu_nar_aer(:,:,:)   = 0._wp 
+      mu_nar_ana(:,:,:)   = 0._wp 
+      mu_nir_aer(:,:,:)   = 0._wp
+      mu_nir_ana(:,:,:)   = 0._wp
       nar_aer(:,:,:)  = 1._wp
       nir_aer(:,:,:)  = 1._wp
       zaltrem(:,:,:)  = 0._wp
@@ -213,42 +217,40 @@ CONTAINS
                   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!
                     ! Get uptake rates of substrates and determine growth rates
                   zuptoxy = nar_pocoef * trb(ji,jj,jk,jpoxy)*1e6  ! mmol O2 / mmol C / day
-                  zuptdoc = ( nar_mumax / nar_yo_doc ) * xnardoc(ji,jj,jk) * xremik  ! mmol DOC / mmol C / day
-                  mu_nar_aer = MAX(0.0, MIN( zuptoxy * nar_yo_oxy, zuptdoc * nar_yo_doc ))  ! /day
+                  zuptdoc = ( nar_mumax / nar_yo_doc ) * xnardoc(ji,jj,jk)  ! mmol DOC / mmol C / day
+                  mu_nar_aer(ji,jj,jk) = MAX(0.0, MIN( zuptoxy * nar_yo_oxy, zuptdoc * nar_yo_doc ))  ! /day
                   zuptno3 = ( nar_mumax / nar_yn_no3 ) * xnarno3(ji,jj,jk)  ! mmol NO3 / mmol C / day
-                  zuptdoc = ( nar_mumax / nar_yn_doc ) * xnardoc(ji,jj,jk) * xremik  ! mmol DOC / mmol C / day
-                  mu_nar_ana = MAX(0.0, MIN( zuptno3 * nar_yn_no3, zuptdoc * nar_yn_doc ))  ! /day
+                  zuptdoc = ( nar_mumax / nar_yn_doc ) * xnardoc(ji,jj,jk)  ! mmol DOC / mmol C / day
+                  mu_nar_ana(ji,jj,jk) = MAX(0.0, MIN( zuptno3 * nar_yn_no3, zuptdoc * nar_yn_doc ))  ! /day
                     ! Determine whether growth is better on oxygen or nitrate (look for max)
-                  IF ( mu_nar_aer >= mu_nar_ana ) THEN
-                     mu_nar(ji,jj,jk) = mu_nar_aer
+                  mu_nar(ji,jj,jk) = MAX(mu_nar_aer(ji,jj,jk), mu_nar_ana(ji,jj,jk))
+                  IF ( mu_nar(ji,jj,jk) == mu_nar_aer(ji,jj,jk) ) THEN
                      nar_aer(ji,jj,jk) = 1.0
                   ELSE
-                     mu_nar(ji,jj,jk) = mu_nar_ana
                      nar_aer(ji,jj,jk) = 0.0
                   ENDIF
-                    ! Calculate ammonia oxidiser biomass accumulation rate
-                  zobiomnar(ji,jj,jk) = mu_nar(ji,jj,jk) * xstep * trb(ji,jj,jk,jpnar)  ! mmol C / ts
+                    ! Calculate ammonia oxidiser biomass accumulation rate (add Fer limitiation)
+                  zobiomnar(ji,jj,jk) = mu_nar(ji,jj,jk) * xstep * trb(ji,jj,jk,jpnar) * xremik ! * xhetfer(ji,jj,jk)  ! mmol C / ts
 
                   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!
                   !!! Heterotrophy (Facultative Nitrite reducers)  !!!
                   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!
                     ! Get uptake rates of substrates and determine growth rates
                   zuptoxy = nir_pocoef * trb(ji,jj,jk,jpoxy)*1e6  ! mmol O2 / mmol C / day
-                  zuptdoc = ( nir_mumax / nir_yo_doc ) * xnirdoc(ji,jj,jk) * xremik ! mmol DOC / mmol C / day
-                  mu_nir_aer = MAX(0.0, MIN( zuptoxy * nir_yo_oxy, zuptdoc * nir_yo_doc ))  ! /day
+                  zuptdoc = ( nir_mumax / nir_yo_doc ) * xnirdoc(ji,jj,jk)  ! mmol DOC / mmol C / day
+                  mu_nir_aer(ji,jj,jk) = MAX(0.0, MIN( zuptoxy * nir_yo_oxy, zuptdoc * nir_yo_doc ))  ! /day
                   zuptno2 = ( nir_mumax / nir_yn_no2 ) * xnirno2(ji,jj,jk)  ! mmol NO2 / mmol C / day
-                  zuptdoc = ( nir_mumax / nir_yn_doc ) * xnirdoc(ji,jj,jk) * xremik  ! mmol DOC / mmol C / day
-                  mu_nir_ana = MAX(0.0, MIN( zuptno2 * nir_yn_no2, zuptdoc * nir_yn_doc ))  ! /day
-                    ! Determine whether growth is better on oxygen or nitrate (look for max)
-                  IF ( mu_nir_aer >= mu_nir_ana ) THEN
-                     mu_nir(ji,jj,jk) = mu_nir_aer
+                  zuptdoc = ( nir_mumax / nir_yn_doc ) * xnirdoc(ji,jj,jk)  ! mmol DOC / mmol C / day
+                  mu_nir_ana(ji,jj,jk) = MAX(0.0, MIN( zuptno2 * nir_yn_no2, zuptdoc * nir_yn_doc ))  ! /day
+                    ! Determine whether growth is better on oxygen or nitrite (look for max)
+                  mu_nir(ji,jj,jk) = MAX(mu_nir_aer(ji,jj,jk), mu_nir_ana(ji,jj,jk))
+                  IF ( mu_nir(ji,jj,jk) == mu_nir_aer(ji,jj,jk) ) THEN
                      nir_aer(ji,jj,jk) = 1.0
                   ELSE
-                     mu_nir(ji,jj,jk) = mu_nir_ana
                      nir_aer(ji,jj,jk) = 0.0
                   ENDIF
                     ! Calculate ammonia oxidiser biomass accumulation rate
-                  zobiomnir(ji,jj,jk) = mu_nir(ji,jj,jk) * xstep * trb(ji,jj,jk,jpnir)  ! mmol C / ts
+                  zobiomnir(ji,jj,jk) = mu_nir(ji,jj,jk) * xstep * trb(ji,jj,jk,jpnir) * xremik ! * xhetfer(ji,jj,jk)  ! mmol C / ts
 
                   !!!! Check that enough substrate exists to perform heterotrophy
                   !doccon  = zobiomnar(ji,jj,jk)/nar_yo_doc*nar_aer(ji,jj,jk)              &
@@ -295,7 +297,7 @@ CONTAINS
                   &                     + zobiomnir(ji,jj,jk)*(rno3/nir_yn_doc - 1.0/nir_CN)*(1.0 - nir_aer(ji,jj,jk)) )
                   tra(ji,jj,jk,jpno2) = tra(ji,jj,jk,jpno2) + 1.0/rno3 * (1.0 - zaltrem(ji,jj,jk)) *                    &
                   &                     ( zobiomnar(ji,jj,jk)/nar_yn_no3*(1.0 - nar_aer(ji,jj,jk))                      &
-                  &                     - zobiomnir(ji,jj,jk)/nir_yn_no2*(1.0 - nar_aer(ji,jj,jk)) )
+                  &                     - zobiomnir(ji,jj,jk)/nir_yn_no2*(1.0 - nir_aer(ji,jj,jk)) )
                   tra(ji,jj,jk,jpno3) = tra(ji,jj,jk,jpno3) - 1.0/rno3 * (1.0 - zaltrem(ji,jj,jk)) *                    &
                   &                     ( zobiomnar(ji,jj,jk)/nar_yn_no3*(1.0 - nar_aer(ji,jj,jk)) )
                   tra(ji,jj,jk,jpoxy) = tra(ji,jj,jk,jpoxy) - (1.0 - zaltrem(ji,jj,jk)) *                               &

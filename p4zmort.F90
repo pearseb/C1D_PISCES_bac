@@ -271,9 +271,11 @@ CONTAINS
                tra(ji,jj,jk,jpnar) = tra(ji,jj,jk,jpnar) - zmortnar
                tra(ji,jj,jk,jpnir) = tra(ji,jj,jk,jpnir) - zmortnir
                tra(ji,jj,jk,jpdoc) = tra(ji,jj,jk,jpdoc) + (zresaoa + zresnob + zresaox   &
-               &                     + zresnar + zresnir)
-               tra(ji,jj,jk,jppoc) = tra(ji,jj,jk,jppoc) + (zmoraoa + zmornob + zmoraox   &
+               &                     + zresnar + zresnir) + (zmoraoa + zmornob + zmoraox   &
                &                     + zmornar + zmornir)
+
+               !tra(ji,jj,jk,jppoc) = tra(ji,jj,jk,jppoc) + (zmoraoa + zmornob + zmoraox   &
+               !&                     + zmornar + zmornir)
 
             END DO
          END DO

@@ -76,6 +76,7 @@ MODULE p4zlim
    REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:)  ::   xnirdoc   !: ???
    REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:)  ::   xnarno3   !: ???
    REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:)  ::   xnirno2   !: ???
+   REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:,:)  ::   xhetfer   !: ???
 
    ! Coefficient for iron limitation
    REAL(wp) ::  xcoef1   = 0.0016  / 55.85  
@@ -199,17 +200,20 @@ CONTAINS
                !
                !   Limitation terms for chemoautotrophs
                !   ----------------------------------------------
-               xaoanh4(ji,jj,jk) = ( trb(ji,jj,jk,jpnh4) / ( trb(ji,jj,jk,jpnh4) + aoa_k_nh4/rno3 + rtrn ) )
-               xnobno2(ji,jj,jk) = ( trb(ji,jj,jk,jpno2) / ( trb(ji,jj,jk,jpno2) + nob_k_no2/rno3 + rtrn ) )
-               xaoxnh4(ji,jj,jk) = ( trb(ji,jj,jk,jpnh4) / ( trb(ji,jj,jk,jpnh4) + aox_k_nh4/rno3 + rtrn ) )
-               xaoxno2(ji,jj,jk) = ( trb(ji,jj,jk,jpno2) / ( trb(ji,jj,jk,jpno2) + aox_k_no2/rno3 + rtrn ) )
+               xaoanh4(ji,jj,jk) = ( (trb(ji,jj,jk,jpnh4)+rtrn) / ( trb(ji,jj,jk,jpnh4) + aoa_k_nh4/rno3 + rtrn ) )
+               xnobno2(ji,jj,jk) = ( (trb(ji,jj,jk,jpno2)+rtrn) / ( trb(ji,jj,jk,jpno2) + nob_k_no2/rno3 + rtrn ) )
+               xaoxnh4(ji,jj,jk) = ( (trb(ji,jj,jk,jpnh4)+rtrn) / ( trb(ji,jj,jk,jpnh4) + aox_k_nh4/rno3 + rtrn ) )
+               xaoxno2(ji,jj,jk) = ( (trb(ji,jj,jk,jpno2)+rtrn) / ( trb(ji,jj,jk,jpno2) + aox_k_no2/rno3 + rtrn ) )
                !
                !   Limitation terms for heterotrophs
                !   ----------------------------------------------
-               xnardoc(ji,jj,jk) = ( trb(ji,jj,jk,jpdoc) / ( trb(ji,jj,jk,jpdoc) + nar_k_doc + rtrn ) )
-               xnirdoc(ji,jj,jk) = ( trb(ji,jj,jk,jpdoc) / ( trb(ji,jj,jk,jpdoc) + nir_k_doc + rtrn ) )
-               xnarno3(ji,jj,jk) = ( trb(ji,jj,jk,jpno3) / ( trb(ji,jj,jk,jpno3) + nar_k_no3/rno3 + rtrn ) )
-               xnirno2(ji,jj,jk) = ( trb(ji,jj,jk,jpno2) / ( trb(ji,jj,jk,jpno2) + nir_k_no2/rno3 + rtrn ) )
+               xnardoc(ji,jj,jk) = ( (trb(ji,jj,jk,jpdoc)+rtrn) / ( trb(ji,jj,jk,jpdoc) + nar_k_doc + rtrn ) )
+               xnirdoc(ji,jj,jk) = ( (trb(ji,jj,jk,jpdoc)+rtrn) / ( trb(ji,jj,jk,jpdoc) + nir_k_doc + rtrn ) )
+               xnarno3(ji,jj,jk) = ( (trb(ji,jj,jk,jpno3)+rtrn) / ( trb(ji,jj,jk,jpno3) + nar_k_no3/rno3 + rtrn ) )
+               xnirno2(ji,jj,jk) = ( (trb(ji,jj,jk,jpno2)+rtrn) / ( trb(ji,jj,jk,jpno2) + nir_k_no2/rno3 + rtrn ) )
+               !print*, jk, xnirno2(ji,jj,jk), trb(ji,jj,jk,jpno2)
+               !print*, "DOC", xnirdoc(ji,jj,jk), trb(ji,jj,jk,jpdoc)
+               xhetfer(ji,jj,jk) = trb(ji,jj,jk,jpfer) / ( concbfe + trb(ji,jj,jk,jpfer) )
                !
            END DO
          END DO
@@ -363,7 +367,7 @@ CONTAINS
          &      xlimnfe (jpi,jpj,jpk), xlimdfe (jpi,jpj,jpk),       &
          &      xlimbac (jpi,jpj,jpk), xlimbacl(jpi,jpj,jpk),       &
          &      concnfe (jpi,jpj,jpk), concdfe (jpi,jpj,jpk),       &
-         &      xlimsi  (jpi,jpj,jpk), STAT=p4z_lim_alloc )
+         &      xlimsi  (jpi,jpj,jpk), xhetfer(jpi,jpj,jpk), STAT=p4z_lim_alloc )
       !
       IF( p4z_lim_alloc /= 0 ) CALL ctl_stop( 'STOP', 'p4z_lim_alloc : failed to allocate arrays.' )
       !
